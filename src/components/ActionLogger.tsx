@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { AppState, genId, getQuickTemplates } from '../store';
+import { AppState, genId, getQuickTemplates, calculateGoldFromXp } from '../store';
 import { callGameMaster } from '../api';
 
 interface Props {
@@ -33,6 +33,15 @@ export default function ActionLogger({ state, setState }: Props) {
       const ts = new Date().toISOString();
       const summaryParts: string[] = [];
 
+      // Calculate gold before setState
+      let totalGold = 0;
+      matches.forEach((m: any) => {
+        const cat = state.categories.find(c => c.id === m.matched_category_id);
+        if (!cat) return;
+        const finalXp = Math.round(m.base_xp * cat.weight * m.contribution_factor);
+        totalGold += calculateGoldFromXp(finalXp);
+      });
+
       setState(prev => {
         const newState = { ...prev };
         matches.forEach((m: any) => {
@@ -50,6 +59,7 @@ export default function ActionLogger({ state, setState }: Props) {
           }];
           summaryParts.push(`+${finalXp} XP → ${cat.name}`);
         });
+        newState.gold = (newState.gold || 0) + totalGold;
 
         // Supplements
         if (Array.isArray(result.supplements) && result.supplements.length > 0) {
@@ -87,6 +97,7 @@ export default function ActionLogger({ state, setState }: Props) {
 
       setText('');
       let summaryText = `Записано: ${summaryParts.join(', ')}`;
+      if (totalGold > 0) summaryText += ` · +${totalGold} 🪙`;
       if (result.seed_detected?.text) summaryText += ' · 🌱 замечено зерно';
       setStatus({ type: 'ok', text: summaryText });
 

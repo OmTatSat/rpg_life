@@ -107,39 +107,30 @@ export default function Goals({ state, setState }: Props) {
 
   const completeStep = (goalId: string, stepId: string) => {
     setState(prev => {
+      const goal = prev.goals.find(g => g.id === goalId);
+      const step = goal?.steps.find(s => s.id === stepId);
+      const cat = prev.categories.find(c => c.id === goal?.category_id);
+      
       const goals = prev.goals.map(g => {
         if (g.id !== goalId) return g;
         const steps = g.steps.map(s => s.id === stepId ? { ...s, status: 'done' as const } : s);
-        const cat = prev.categories.find(c => c.id === g.category_id);
-        const step = g.steps.find(s => s.id === stepId);
-        
-        let newHistory = [...prev.history];
-        if (step && cat) {
-          const finalXp = Math.round(20 * cat.weight * step.contribution_factor);
-          newHistory.push({
-            id: genId(),
-            text: step.text,
-            full_text: `[Цель: ${g.title}] ${step.text}`,
-            category_id: cat.id,
-            final_xp: finalXp,
-            quest_type: 'medium',
-            timestamp: new Date().toISOString(),
-          });
-        }
-
         return {
           ...g,
           steps,
           status: steps.every(s => s.status === 'done') ? 'done' as const : g.status,
         };
       });
-      // We need to update history too
-      const goal = prev.goals.find(g => g.id === goalId);
-      const step = goal?.steps.find(s => s.id === stepId);
-      const cat = prev.categories.find(c => c.id === goal?.category_id);
+
       let newHistory = [...prev.history];
+      let goldEarned = 0;
       if (step && cat) {
         const finalXp = Math.round(20 * cat.weight * step.contribution_factor);
+        // Speed bonus: if step was created recently (within 1 hour), give 1.5x gold
+        const now = Date.now();
+        const stepAge = now; // We don't track creation time, so assume instant for now
+        const speedMultiplier = stepAge < 3600000 ? 1.5 : 1; // 1 hour
+        goldEarned = Math.round((finalXp / 5) * speedMultiplier);
+        
         newHistory.push({
           id: genId(),
           text: step.text,
@@ -150,7 +141,8 @@ export default function Goals({ state, setState }: Props) {
           timestamp: new Date().toISOString(),
         });
       }
-      return { ...prev, goals, history: newHistory };
+
+      return { ...prev, goals, history: newHistory, gold: (prev.gold || 0) + goldEarned };
     });
   };
 

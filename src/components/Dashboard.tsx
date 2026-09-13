@@ -90,7 +90,7 @@ export default function Dashboard({ state }: Props) {
       </div>
 
       {/* Quick Stats Row */}
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-4 gap-3">
         <div className="glass-panel p-4 text-center">
           <div className={`text-2xl font-bold ${streak > 0 ? 'streak-fire' : ''}`}>
             {streak > 0 ? '🔥' : '💤'} {streak}
@@ -104,6 +104,10 @@ export default function Dashboard({ state }: Props) {
         <div className="glass-panel p-4 text-center">
           <div className="text-2xl font-bold">{todayEntries.length}</div>
           <div className="text-xs text-[var(--text-dim)] mt-1">записей сегодня</div>
+        </div>
+        <div className="glass-panel p-4 text-center">
+          <div className="text-2xl font-bold text-[var(--warn)]">🪙 {state.gold || 0}</div>
+          <div className="text-xs text-[var(--text-dim)] mt-1">золото</div>
         </div>
       </div>
 

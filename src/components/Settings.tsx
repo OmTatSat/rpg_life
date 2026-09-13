@@ -162,6 +162,10 @@ export default function Settings({ state, setState }: Props) {
             <div className="text-lg font-bold">{getTotalXp(state)}</div>
           </div>
           <div className="bg-[var(--panel-2)] rounded-lg p-3">
+            <div className="text-xs text-[var(--text-dim)]">Золото 🪙</div>
+            <div className="text-lg font-bold text-[var(--warn)]">{state.gold || 0}</div>
+          </div>
+          <div className="bg-[var(--panel-2)] rounded-lg p-3">
             <div className="text-xs text-[var(--text-dim)]">Серия дней</div>
             <div className="text-lg font-bold">{calculateStreak(state.history)}</div>
           </div>
@@ -176,6 +180,10 @@ export default function Settings({ state, setState }: Props) {
           <div className="bg-[var(--panel-2)] rounded-lg p-3">
             <div className="text-xs text-[var(--text-dim)]">Артефактов</div>
             <div className="text-lg font-bold">{state.artifacts.length}</div>
+          </div>
+          <div className="bg-[var(--panel-2)] rounded-lg p-3">
+            <div className="text-xs text-[var(--text-dim)]">Зёрен</div>
+            <div className="text-lg font-bold">{state.seeds.length}</div>
           </div>
         </div>
       </div>

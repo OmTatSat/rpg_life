@@ -95,6 +95,15 @@ export interface Achievement {
   condition: (state: AppState) => boolean;
 }
 
+export interface ShopItem {
+  id: string;
+  name: string;
+  description: string;
+  cost: number;
+  tier: 'cheap' | 'expensive';
+  purchased_count: number;
+}
+
 export interface AppState {
   categories: Category[];
   history: HistoryEntry[];
@@ -103,6 +112,8 @@ export interface AppState {
   seeds: Seed[];
   artifacts: Artifact[];
   daily_quests: DailyQuest[];
+  gold: number;
+  shop_items: ShopItem[];
   apiKey: string;
   modelName: string;
 }
@@ -125,6 +136,15 @@ export function createDefaultState(): AppState {
     seeds: [],
     artifacts: [],
     daily_quests: [],
+    gold: 0,
+    shop_items: [
+      { id: 'cheap_1', name: 'Чашка кофе', description: 'Маленькое удовольствие', cost: 10, tier: 'cheap', purchased_count: 0 },
+      { id: 'cheap_2', name: 'Эпизод сериала', description: '30 минут отдыха', cost: 15, tier: 'cheap', purchased_count: 0 },
+      { id: 'cheap_3', name: 'Вкусняшка', description: 'Что-то вкусное', cost: 20, tier: 'cheap', purchased_count: 0 },
+      { id: 'expensive_1', name: 'День без дел', description: 'Целый день на себя', cost: 100, tier: 'expensive', purchased_count: 0 },
+      { id: 'expensive_2', name: 'Покупка до 500 грн', description: 'Маленькая хотелка', cost: 150, tier: 'expensive', purchased_count: 0 },
+      { id: 'expensive_3', name: 'Выходной', description: 'Полный выходной без обязательств', cost: 200, tier: 'expensive', purchased_count: 0 },
+    ],
     apiKey: '',
     modelName: 'gemini-flash-lite-latest',
   };
@@ -153,6 +173,21 @@ export function getCategoryTotalXp(state: AppState, catId: string): number {
 
 export function getTotalXp(state: AppState): number {
   return state.history.reduce((s, h) => s + (h.final_xp || 0), 0);
+}
+
+// Gold calculation: 1 gold per 5 XP earned, with speed bonus
+export function calculateGoldFromXp(baseXp: number, speedBonus: number = 1): number {
+  return Math.round((baseXp / 5) * speedBonus);
+}
+
+// Speed bonus: if action logged within 1 hour of creation, 1.5x multiplier
+export function getSpeedBonus(createdAt: string, loggedAt: string): number {
+  const created = new Date(createdAt).getTime();
+  const logged = new Date(loggedAt).getTime();
+  const hoursDiff = (logged - created) / (1000 * 60 * 60);
+  if (hoursDiff <= 1) return 1.5; // Within 1 hour
+  if (hoursDiff <= 6) return 1.2; // Within 6 hours
+  return 1; // No bonus
 }
 
 export function getOverallLevel(state: AppState): { level: number; current_xp: number; xp_to_next_level: number } {
@@ -338,8 +373,9 @@ export function loadState(): AppState {
     const saved = localStorage.getItem(LS_KEY);
     if (saved) {
       const parsed = JSON.parse(saved);
+      const defaultState = createDefaultState();
       return {
-        ...createDefaultState(),
+        ...defaultState,
         ...parsed,
         categories: parsed.categories || DEFAULT_CATEGORIES,
         history: parsed.history || [],
@@ -348,6 +384,8 @@ export function loadState(): AppState {
         seeds: parsed.seeds || [],
         artifacts: parsed.artifacts || [],
         daily_quests: parsed.daily_quests || [],
+        gold: parsed.gold || 0,
+        shop_items: parsed.shop_items || defaultState.shop_items,
         apiKey: parsed.apiKey || '',
         modelName: parsed.modelName || 'gemini-flash-lite-latest',
       };

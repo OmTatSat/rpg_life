@@ -5,9 +5,10 @@ import ActionLogger from './components/ActionLogger';
 import Goals from './components/Goals';
 import Seeds from './components/Seeds';
 import Brainstorm from './components/Brainstorm';
+import Shop from './components/Shop';
 import Settings from './components/Settings';
 
-type Tab = 'dashboard' | 'log' | 'goals' | 'seeds' | 'brainstorm' | 'settings';
+type Tab = 'dashboard' | 'log' | 'goals' | 'seeds' | 'brainstorm' | 'shop' | 'settings';
 
 const TABS: { id: Tab; label: string; icon: string }[] = [
   { id: 'dashboard', label: 'Обзор', icon: '📊' },
@@ -15,6 +16,7 @@ const TABS: { id: Tab; label: string; icon: string }[] = [
   { id: 'goals', label: 'Цели', icon: '🎯' },
   { id: 'seeds', label: 'Зёрна', icon: '🌱' },
   { id: 'brainstorm', label: 'Советник', icon: '💭' },
+  { id: 'shop', label: 'Магазин', icon: '🛒' },
   { id: 'settings', label: '⚙', icon: '' },
 ];
 
@@ -84,6 +86,7 @@ export default function App() {
         {activeTab === 'goals' && <Goals state={state} setState={setState} />}
         {activeTab === 'seeds' && <Seeds state={state} setState={setState} />}
         {activeTab === 'brainstorm' && <Brainstorm state={state} setState={setState} />}
+        {activeTab === 'shop' && <Shop state={state} setState={setState} />}
         {activeTab === 'settings' && <Settings state={state} setState={setState} />}
       </main>
 
