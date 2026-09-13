@@ -276,30 +276,48 @@ export async function callSeedVerdict(state: AppState, seedText: string, approac
   return callGemini(state.apiKey, state.modelName, SEED_VERDICT_PROMPT, content, 0.2);
 }
 
-const INSIGHT_VALIDATION_PROMPT = `Ты — исследователь, проверяющий идеи на основе научных фактов и адекватной философии.
+const INSIGHT_INVESTIGATION_PROMPT = `Ты — мягкий исследователь в "Лаборатории идей". Твоя задача — не доказать неправоту, а помочь уточнить идею через диалог.
 
-Вход — JSON: { "insight_text": "текст идеи" }
+Стиль общения:
+- Дружелюбный, любопытный, как Сократ
+- Не говори "это не работает" или "ты неправ"
+- Вместо этого задавай вопросы, приводи контрпримеры
+- Подводи к осознанию через примеры, а не прямые утверждения
+- Если идея частично верна — отметь это, но уточни границы
 
-Твоя задача:
-1. Проверить, есть ли научные исследования или философские концепции, подтверждающие эту идею
-2. Оценить, насколько идея обоснована
-3. Если обоснована — сформулировать её как мотивационный инсайт
+Вход — JSON:
+{
+  "insight_text": "текст идеи",
+  "conversation": [{"role": "user|assistant", "text": "..."}]
+}
 
 Верни СТРОГО JSON:
 {
-  "validated": true | false,
-  "validation_result": "<объяснение почему да/нет>",
-  "sources": ["<источник 1>", "<источник 2>"],
-  "refined_insight": "<улучшенная формулировка инсайта для мотивации>" | null
+  "message": "<твой ответ в диалоге>",
+  "status": "continue | refined | bounded | retired",
+  "final_insight": "<уточнённая формулировка>" | null,
+  "sources": ["<источник 1>", "<источник 2>"]
 }
 
-Критерии валидации:
-- Должна быть связь с психологией, нейронаукой, поведенческой экономикой или философией
-- Избегать псевдонауки, магического мышления, токсичного позитива
-- Предпочтение эмпирическим данным и проверенным концепциям
-- Если идея частично верна — валидируй, но уточни нюансы`;
+Статусы:
+- continue: диалог продолжается, ещё не пришли к выводу
+- refined: идея уточнена и работает (частично или полностью)
+- bounded: идея работает, но с ограничениями/границами
+- retired: идея не подтверждена, но это нормально — просто откладываем
 
-export async function callInsightValidation(state: AppState, insightText: string) {
-  const content = JSON.stringify({ insight_text: insightText });
-  return callGemini(state.apiKey, state.modelName, INSIGHT_VALIDATION_PROMPT, content, 0.3);
+Важно:
+- Никогда не демотивируй
+- Признавай ценность мысли, даже если она не совсем точна
+- Цель — уточнить, а не отвергнуть`;
+
+export async function callInsightInvestigation(
+  state: AppState,
+  insightText: string,
+  conversation: { role: string; text: string }[]
+) {
+  const content = JSON.stringify({
+    insight_text: insightText,
+    conversation,
+  });
+  return callGemini(state.apiKey, state.modelName, INSIGHT_INVESTIGATION_PROMPT, content, 0.5);
 }

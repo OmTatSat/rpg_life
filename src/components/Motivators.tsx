@@ -67,16 +67,16 @@ export default function MotivatorSidebar({ state }: Props) {
   const [visible, setVisible] = useState(true);
   const lastTextRef = useRef<string | null>(null);
 
-  // Get insight artifacts
-  const insightArtifacts = state.artifacts.filter((a: any) => {
-    const insight = state.insights.find((i: any) => i.artifact_id === a.id);
-    return insight !== undefined;
+  // Get insight artifacts (only refined/bounded, not retired)
+  const insightArtifacts = (state.artifacts || []).filter((a: any) => {
+    const insight = (state.insights || []).find((i: any) => i.artifact_id === a.id);
+    return insight && (insight.status === 'refined' || insight.status === 'bounded');
   });
 
   // Build pool of all motivators (general + insights)
   const allMotivators = [
     ...MOTIVATORS_GENERAL,
-    ...insightArtifacts.map((a: any) => ({ text: a.description, source: 'инсайт' })),
+    ...insightArtifacts.map((a: any) => ({ text: a.description, source: '✨ инсайт' })),
   ];
 
   // Pick initial random

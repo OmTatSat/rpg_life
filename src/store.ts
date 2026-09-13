@@ -69,11 +69,17 @@ export interface Artifact {
   created_at: string;
 }
 
+export interface InsightMessage {
+  role: 'user' | 'assistant';
+  text: string;
+}
+
 export interface Insight {
   id: string;
   text: string;
-  status: 'pending' | 'validated' | 'rejected';
-  validation_result: string | null;
+  status: 'pending' | 'investigating' | 'refined' | 'bounded' | 'retired';
+  messages: InsightMessage[];
+  final_insight: string | null;
   sources: string[];
   artifact_id: string | null;
   created_at: string;
