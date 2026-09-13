@@ -4,6 +4,7 @@ import tailwindcss from "@tailwindcss/vite";
 
 export default defineConfig({
   plugins: [react(), tailwindcss()],
+  base: '/rpg_life/',
   server: {
     host: "0.0.0.0",
     port: 3000,
