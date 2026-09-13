@@ -153,6 +153,7 @@ export function mergeState(local: AppState, remote: AppState): AppState {
     supplements_log: mergeById(local.supplements_log, remote.supplements_log),
     seeds: mergeById(local.seeds, remote.seeds),
     artifacts: mergeById(local.artifacts, remote.artifacts),
+    insights: mergeById(local.insights || [], remote.insights || []),
     daily_quests: mergeById(local.daily_quests, remote.daily_quests),
     // For gold, take the max
     gold: Math.max(local.gold || 0, remote.gold || 0),

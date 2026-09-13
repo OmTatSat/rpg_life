@@ -69,6 +69,16 @@ export interface Artifact {
   created_at: string;
 }
 
+export interface Insight {
+  id: string;
+  text: string;
+  status: 'pending' | 'validated' | 'rejected';
+  validation_result: string | null;
+  sources: string[];
+  artifact_id: string | null;
+  created_at: string;
+}
+
 export interface SupplementEntry {
   id: string;
   name: string;
@@ -111,6 +121,7 @@ export interface AppState {
   supplements_log: SupplementEntry[];
   seeds: Seed[];
   artifacts: Artifact[];
+  insights: Insight[];
   daily_quests: DailyQuest[];
   gold: number;
   shop_items: ShopItem[];
@@ -139,6 +150,7 @@ export function createDefaultState(): AppState {
     supplements_log: [],
     seeds: [],
     artifacts: [],
+    insights: [],
     daily_quests: [],
     gold: 0,
     shop_items: [
@@ -391,6 +403,7 @@ export function loadState(): AppState {
         supplements_log: parsed.supplements_log || [],
         seeds: parsed.seeds || [],
         artifacts: parsed.artifacts || [],
+        insights: parsed.insights || [],
         daily_quests: parsed.daily_quests || [],
         gold: parsed.gold || 0,
         shop_items: parsed.shop_items || defaultState.shop_items,

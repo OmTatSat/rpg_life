@@ -7,17 +7,19 @@ import Goals from './components/Goals';
 import Seeds from './components/Seeds';
 import Brainstorm from './components/Brainstorm';
 import Shop from './components/Shop';
+import Insights from './components/Insights';
 import Settings from './components/Settings';
 import MotivatorSidebar from './components/Motivators';
 import GoalsSidebar from './components/GoalsSidebar';
 
-type Tab = 'dashboard' | 'log' | 'goals' | 'seeds' | 'brainstorm' | 'shop' | 'settings';
+type Tab = 'dashboard' | 'log' | 'goals' | 'seeds' | 'brainstorm' | 'shop' | 'insights' | 'settings';
 
 const TABS: { id: Tab; label: string; icon: string }[] = [
   { id: 'dashboard', label: 'Обзор', icon: '📊' },
   { id: 'log', label: 'Действия', icon: '⚡' },
   { id: 'goals', label: 'Цели', icon: '🎯' },
   { id: 'seeds', label: 'Зёрна', icon: '🌱' },
+  { id: 'insights', label: 'Инсайты', icon: '💡' },
   { id: 'brainstorm', label: 'Советник', icon: '💭' },
   { id: 'shop', label: 'Магазин', icon: '🛒' },
   { id: 'settings', label: '⚙', icon: '' },
@@ -176,6 +178,7 @@ export default function App() {
             {activeTab === 'log' && <ActionLogger state={state} setState={setState} />}
             {activeTab === 'goals' && <Goals state={state} setState={setState} />}
             {activeTab === 'seeds' && <Seeds state={state} setState={setState} />}
+            {activeTab === 'insights' && <Insights state={state} setState={setState} />}
             {activeTab === 'brainstorm' && <Brainstorm state={state} setState={setState} />}
             {activeTab === 'shop' && <Shop state={state} setState={setState} />}
             {activeTab === 'settings' && <Settings state={state} setState={setState} />}

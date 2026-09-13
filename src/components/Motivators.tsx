@@ -65,12 +65,25 @@ function MotivatorCard({ motivator, visible }: { motivator: { text: string; sour
 
 export default function MotivatorSidebar({ state }: Props) {
   const [visible, setVisible] = useState(true);
-  const lastGeneralTextRef = useRef<string | null>(null);
+  const lastTextRef = useRef<string | null>(null);
+
+  // Get insight artifacts
+  const insightArtifacts = state.artifacts.filter((a: any) => {
+    const insight = state.insights.find((i: any) => i.artifact_id === a.id);
+    return insight !== undefined;
+  });
+
+  // Build pool of all motivators (general + insights)
+  const allMotivators = [
+    ...MOTIVATORS_GENERAL,
+    ...insightArtifacts.map((a: any) => ({ text: a.description, source: 'инсайт' })),
+  ];
 
   // Pick initial random
   const [currentMotivator, setCurrentMotivator] = useState(() => {
-    const choice = MOTIVATORS_GENERAL[Math.floor(Math.random() * MOTIVATORS_GENERAL.length)];
-    lastGeneralTextRef.current = choice.text;
+    if (allMotivators.length === 0) return MOTIVATORS_GENERAL[0];
+    const choice = allMotivators[Math.floor(Math.random() * allMotivators.length)];
+    lastTextRef.current = choice.text;
     return choice;
   });
 
@@ -80,16 +93,16 @@ export default function MotivatorSidebar({ state }: Props) {
       setTimeout(() => {
         let choice;
         do {
-          choice = MOTIVATORS_GENERAL[Math.floor(Math.random() * MOTIVATORS_GENERAL.length)];
-        } while (MOTIVATORS_GENERAL.length > 1 && choice.text === lastGeneralTextRef.current);
-        lastGeneralTextRef.current = choice.text;
+          choice = allMotivators[Math.floor(Math.random() * allMotivators.length)];
+        } while (allMotivators.length > 1 && choice.text === lastTextRef.current);
+        lastTextRef.current = choice.text;
         setCurrentMotivator(choice);
         setVisible(true);
       }, 700);
     }, 60000);
 
     return () => clearInterval(interval);
-  }, []);
+  }, [allMotivators]);
 
   return (
     <aside className="hidden lg:flex flex-col gap-4 w-64 flex-shrink-0 sticky top-4 self-start">

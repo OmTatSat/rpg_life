@@ -275,3 +275,31 @@ export async function callSeedVerdict(state: AppState, seedText: string, approac
   });
   return callGemini(state.apiKey, state.modelName, SEED_VERDICT_PROMPT, content, 0.2);
 }
+
+const INSIGHT_VALIDATION_PROMPT = `Ты — исследователь, проверяющий идеи на основе научных фактов и адекватной философии.
+
+Вход — JSON: { "insight_text": "текст идеи" }
+
+Твоя задача:
+1. Проверить, есть ли научные исследования или философские концепции, подтверждающие эту идею
+2. Оценить, насколько идея обоснована
+3. Если обоснована — сформулировать её как мотивационный инсайт
+
+Верни СТРОГО JSON:
+{
+  "validated": true | false,
+  "validation_result": "<объяснение почему да/нет>",
+  "sources": ["<источник 1>", "<источник 2>"],
+  "refined_insight": "<улучшенная формулировка инсайта для мотивации>" | null
+}
+
+Критерии валидации:
+- Должна быть связь с психологией, нейронаукой, поведенческой экономикой или философией
+- Избегать псевдонауки, магического мышления, токсичного позитива
+- Предпочтение эмпирическим данным и проверенным концепциям
+- Если идея частично верна — валидируй, но уточни нюансы`;
+
+export async function callInsightValidation(state: AppState, insightText: string) {
+  const content = JSON.stringify({ insight_text: insightText });
+  return callGemini(state.apiKey, state.modelName, INSIGHT_VALIDATION_PROMPT, content, 0.3);
+}
