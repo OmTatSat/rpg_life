@@ -2,6 +2,7 @@
   "name": "sandbox-workspace",
   "private": true,
   "type": "module",
+  "homepage": "https://omtatsat.github.io/rpg_life",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
