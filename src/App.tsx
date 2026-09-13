@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { AppState, loadState, saveState } from './store';
+import { fetchFromGitHub, mergeState } from './github';
 import Dashboard from './components/Dashboard';
 import ActionLogger from './components/ActionLogger';
 import Goals from './components/Goals';
@@ -48,6 +49,23 @@ export default function App() {
     prevHistoryLength.current = state.history.length;
   }, [state.history.length, state.history, state.categories]);
 
+  // Auto-sync from GitHub on load
+  const [syncNotice, setSyncNotice] = useState<string | null>(null);
+  useEffect(() => {
+    if (state.gh_token && state.gh_repo) {
+      fetchFromGitHub(state).then(remote => {
+        if (remote) {
+          const merged = mergeState(state, remote);
+          setState(() => merged);
+          setSyncNotice(`Синхронизировано с GitHub (${new Date().toLocaleTimeString()})`);
+          setTimeout(() => setSyncNotice(null), 4000);
+        }
+      }).catch(e => {
+        console.error('Auto-sync failed:', e);
+      });
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   return (
     <div className="min-h-screen flex flex-col">
       {/* XP Animation Overlay */}
@@ -55,6 +73,15 @@ export default function App() {
         <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 animate-slide-up">
           <div className="bg-[var(--good)] text-white px-4 py-2 rounded-full font-bold text-sm shadow-lg glow-accent xp-burst">
             +{xpAnimation.amount} XP → {xpAnimation.category}
+          </div>
+        </div>
+      )}
+
+      {/* Sync Notice */}
+      {syncNotice && (
+        <div className="fixed top-4 right-4 z-50 animate-slide-up">
+          <div className="bg-[var(--panel-2)] border border-[var(--good)] text-[var(--good)] px-4 py-2 rounded-lg text-sm shadow-lg">
+            ✅ {syncNotice}
           </div>
         </div>
       )}
@@ -73,7 +100,17 @@ export default function App() {
               onClick={() => setActiveTab('settings')}
               className="text-xs text-[var(--warn)] hover:underline"
             >
-              ⚠ Настрой API
+              ⚠ API
+            </button>
+          )}
+          {state.gh_token && state.gh_repo ? (
+            <span className="text-xs text-[var(--good)]">● GitHub</span>
+          ) : (
+            <button
+              onClick={() => setActiveTab('settings')}
+              className="text-xs text-[var(--warn)] hover:underline"
+            >
+              ⚠ GitHub
             </button>
           )}
         </div>

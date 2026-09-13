@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { AppState, ACHIEVEMENTS, calculateStreak, deriveLevel, getCategoryTotalXp, getTotalXp } from '../store';
+import { fetchFromGitHub, saveToGitHub, mergeState } from '../github';
 
 interface Props {
   state: AppState;
@@ -7,8 +8,35 @@ interface Props {
 }
 
 export default function Settings({ state, setState }: Props) {
+  const [syncStatus, setSyncStatus] = useState<{ type: 'idle' | 'loading' | 'ok' | 'err'; text: string }>({ type: 'idle', text: '' });
   const unlockedAchievements = ACHIEVEMENTS.filter(a => a.condition(state));
   const lockedAchievements = ACHIEVEMENTS.filter(a => !a.condition(state));
+
+  const handleSyncLoad = async () => {
+    setSyncStatus({ type: 'loading', text: 'Загружаю с GitHub...' });
+    try {
+      const remote = await fetchFromGitHub(state);
+      if (!remote) {
+        setSyncStatus({ type: 'ok', text: 'На GitHub пока нет данных — локальная версия сохранится при первом "Сохранить"' });
+        return;
+      }
+      const merged = mergeState(state, remote);
+      setState(() => merged);
+      setSyncStatus({ type: 'ok', text: `Синхронизировано (${new Date().toLocaleTimeString()})` });
+    } catch (e: any) {
+      setSyncStatus({ type: 'err', text: e.message });
+    }
+  };
+
+  const handleSyncSave = async () => {
+    setSyncStatus({ type: 'loading', text: 'Сохраняю на GitHub...' });
+    try {
+      await saveToGitHub(state);
+      setSyncStatus({ type: 'ok', text: `Сохранено на GitHub (${new Date().toLocaleTimeString()})` });
+    } catch (e: any) {
+      setSyncStatus({ type: 'err', text: e.message });
+    }
+  };
 
   const clearAll = () => {
     if (!confirm('Удалить ВСЕ данные? Это действие нельзя отменить!')) return;
@@ -94,6 +122,69 @@ export default function Settings({ state, setState }: Props) {
             >
               Забыть ключ
             </button>
+          )}
+        </div>
+      </div>
+
+      {/* GitHub Sync */}
+      <div className="glass-panel p-4">
+        <h3 className="text-sm font-semibold mb-3">🔄 Синхронизация с GitHub</h3>
+        <div className="space-y-3">
+          <div>
+            <label className="text-xs text-[var(--text-dim)] block mb-1">GitHub Token (Personal Access Token)</label>
+            <input
+              type="password"
+              value={state.gh_token}
+              onChange={e => setState(prev => ({ ...prev, gh_token: e.target.value }))}
+              placeholder="ghp_..."
+              className="w-full bg-[var(--panel-2)] border border-[var(--line)] rounded-lg px-3 py-2 text-sm text-[var(--text)] font-mono focus:outline-none focus:border-[var(--accent)]"
+            />
+          </div>
+          <div>
+            <label className="text-xs text-[var(--text-dim)] block mb-1">Репозиторий (owner/repo)</label>
+            <input
+              type="text"
+              value={state.gh_repo}
+              onChange={e => setState(prev => ({ ...prev, gh_repo: e.target.value }))}
+              placeholder="username/life-rpg-data"
+              className="w-full bg-[var(--panel-2)] border border-[var(--line)] rounded-lg px-3 py-2 text-sm text-[var(--text)] font-mono focus:outline-none focus:border-[var(--accent)]"
+            />
+          </div>
+          <div>
+            <label className="text-xs text-[var(--text-dim)] block mb-1">Путь к файлу</label>
+            <input
+              type="text"
+              value={state.gh_file_path}
+              onChange={e => setState(prev => ({ ...prev, gh_file_path: e.target.value }))}
+              placeholder="data/life-rpg.json"
+              className="w-full bg-[var(--panel-2)] border border-[var(--line)] rounded-lg px-3 py-2 text-sm text-[var(--text)] font-mono focus:outline-none focus:border-[var(--accent)]"
+            />
+          </div>
+          <p className="text-xs text-[var(--text-dim)]">
+            Создай приватный репозиторий и <a href="https://github.com/settings/tokens" target="_blank" rel="noreferrer" className="text-[var(--accent)] hover:underline">Personal Access Token</a> с правами <code className="bg-[var(--panel-2)] px-1 rounded">repo</code>. Токен хранится только в этом браузере.
+          </p>
+          {state.gh_token && state.gh_repo && (
+            <div className="flex gap-2">
+              <button
+                onClick={handleSyncLoad}
+                disabled={syncStatus.type === 'loading'}
+                className="flex-1 px-4 py-2 border border-[var(--accent)] rounded-lg text-sm text-[var(--accent)] hover:bg-[var(--accent)] hover:text-white disabled:opacity-50"
+              >
+                📥 Загрузить
+              </button>
+              <button
+                onClick={handleSyncSave}
+                disabled={syncStatus.type === 'loading'}
+                className="flex-1 px-4 py-2 bg-[var(--accent)] text-white rounded-lg text-sm font-semibold disabled:opacity-50"
+              >
+                📤 Сохранить
+              </button>
+            </div>
+          )}
+          {syncStatus.text && (
+            <p className={`text-sm ${syncStatus.type === 'err' ? 'text-[var(--danger)]' : syncStatus.type === 'ok' ? 'text-[var(--good)]' : 'text-[var(--text-dim)]'}`}>
+              {syncStatus.text}
+            </p>
           )}
         </div>
       </div>
