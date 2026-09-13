@@ -69,15 +69,21 @@ function InsightChat({
       const result = await callInsightInvestigation(state, insight.text, conversation);
 
       const assistantMsg: InsightMessage = { role: 'assistant', text: result.message };
+      
+      // Check if assistant message contains a question
+      const hasQuestion = /[?？]/.test(assistantMsg.text);
 
       setState(prev => {
         const updated = prev.insights.map(i => {
           if (i.id !== insight.id) return i;
           const newMessages = [...i.messages, assistantMsg];
           const update: Partial<Insight> = { messages: newMessages };
+          
+          // If there's a question, keep investigating even if AI suggested refined/bounded
+          const effectiveStatus = hasQuestion ? 'continue' : result.status;
 
-          if (result.status === 'refined' || result.status === 'bounded') {
-            update.status = result.status;
+          if (effectiveStatus === 'refined' || effectiveStatus === 'bounded') {
+            update.status = effectiveStatus;
             update.final_insight = result.final_insight;
             update.sources = result.sources || [];
 
@@ -92,34 +98,41 @@ function InsightChat({
                 created_at: new Date().toISOString(),
               };
               update.artifact_id = artifact.id;
-              return { ...i, ...update, artifacts: [...(prev.artifacts || []), artifact] };
             }
-          } else if (result.status === 'retired') {
+          } else if (effectiveStatus === 'retired') {
             update.status = 'retired';
             update.final_insight = result.final_insight;
             update.sources = result.sources || [];
+          } else {
+            // continue - keep investigating, but save preliminary insight if available
+            update.status = 'investigating';
+            if (result.final_insight) {
+              update.final_insight = result.final_insight;
+            }
+            if (result.sources && result.sources.length > 0) {
+              update.sources = result.sources;
+            }
           }
 
           return { ...i, ...update };
         });
 
         // Handle artifact creation separately
-        if (result.status === 'refined' || result.status === 'bounded') {
-          if (result.final_insight) {
-            const artifact: Artifact = {
-              id: genId(),
-              name: result.final_insight.slice(0, 50),
-              description: result.final_insight,
-              category_id: null,
-              source_seed_id: insight.id,
-              created_at: new Date().toISOString(),
-            };
-            return {
-              ...prev,
-              insights: updated,
-              artifacts: [...(prev.artifacts || []), artifact],
-            };
-          }
+        const effectiveStatus = hasQuestion ? 'continue' : result.status;
+        if ((effectiveStatus === 'refined' || effectiveStatus === 'bounded') && result.final_insight) {
+          const artifact: Artifact = {
+            id: genId(),
+            name: result.final_insight.slice(0, 50),
+            description: result.final_insight,
+            category_id: null,
+            source_seed_id: insight.id,
+            created_at: new Date().toISOString(),
+          };
+          return {
+            ...prev,
+            insights: updated,
+            artifacts: [...(prev.artifacts || []), artifact],
+          };
         }
 
         return { ...prev, insights: updated };
@@ -197,7 +210,7 @@ function InsightChat({
       </div>
 
       {/* Final insight display */}
-      {insight.final_insight && (insight.status === 'refined' || insight.status === 'bounded') && (
+      {insight.final_insight && insight.status === 'refined' && (
         <div className="p-3 bg-[var(--panel-2)] rounded-lg border-l-3 mb-3" style={{ borderLeftColor: 'var(--good)' }}>
           <div className="text-xs text-[var(--text-dim)] mb-1">✨ Уточнённая формулировка:</div>
           <div className="text-sm italic">«{insight.final_insight}»</div>
@@ -206,6 +219,26 @@ function InsightChat({
               Источники: {insight.sources.join(', ')}
             </div>
           )}
+        </div>
+      )}
+
+      {insight.final_insight && insight.status === 'bounded' && (
+        <div className="p-3 bg-[var(--panel-2)] rounded-lg border-l-3 mb-3" style={{ borderLeftColor: 'var(--accent)' }}>
+          <div className="text-xs text-[var(--text-dim)] mb-1">🎯 Уточнённая формулировка с границами:</div>
+          <div className="text-sm italic">«{insight.final_insight}»</div>
+          {insight.sources.length > 0 && (
+            <div className="text-xs text-[var(--text-dim)] mt-2">
+              Источники: {insight.sources.join(', ')}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Preliminary insight during investigation */}
+      {insight.final_insight && insight.status === 'investigating' && (
+        <div className="p-3 bg-[var(--panel-2)] rounded-lg border-l-3 mb-3 opacity-70" style={{ borderLeftColor: 'var(--warn)' }}>
+          <div className="text-xs text-[var(--text-dim)] mb-1">💭 Текущая гипотеза (может измениться):</div>
+          <div className="text-sm italic">«{insight.final_insight}»</div>
         </div>
       )}
 
