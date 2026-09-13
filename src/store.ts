@@ -119,6 +119,7 @@ export interface AppState {
   gh_token: string;
   gh_repo: string;
   gh_file_path: string;
+  gh_auto_sync: boolean;
 }
 
 // Default state
@@ -153,6 +154,7 @@ export function createDefaultState(): AppState {
     gh_token: '',
     gh_repo: '',
     gh_file_path: 'data/life-rpg-v2.json',
+    gh_auto_sync: true,
   };
 }
 
@@ -397,6 +399,7 @@ export function loadState(): AppState {
         gh_token: parsed.gh_token || '',
         gh_repo: parsed.gh_repo || '',
         gh_file_path: parsed.gh_file_path || 'data/life-rpg-v2.json',
+        gh_auto_sync: parsed.gh_auto_sync !== false, // default true
       };
     }
   } catch (e) {

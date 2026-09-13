@@ -175,29 +175,50 @@ export default function Settings({ state, setState }: Props) {
           <p className="text-xs text-[var(--warn)]">
             ⚠️ По умолчанию путь <code className="bg-[var(--panel-2)] px-1 rounded">data/life-rpg-v2.json</code> — это отдельный файл, чтобы не затирать данные из старой версии. Если хочешь мигрировать старые данные — используй Экспорт/Импорт JSON ниже.
           </p>
-          {state.gh_token && state.gh_repo && (
-            <div className="flex gap-2">
-              <button
-                onClick={handleSyncLoad}
-                disabled={syncStatus.type === 'loading'}
-                className="flex-1 px-4 py-2 border border-[var(--accent)] rounded-lg text-sm text-[var(--accent)] hover:bg-[var(--accent)] hover:text-white disabled:opacity-50"
-              >
-                📥 Загрузить
-              </button>
-              <button
-                onClick={handleSyncSave}
-                disabled={syncStatus.type === 'loading'}
-                className="flex-1 px-4 py-2 bg-[var(--accent)] text-white rounded-lg text-sm font-semibold disabled:opacity-50"
-              >
-                📤 Сохранить
-              </button>
-            </div>
+          {/* Sync buttons - always visible */}
+          <div className="flex gap-2">
+            <button
+              onClick={handleSyncLoad}
+              disabled={syncStatus.type === 'loading' || !state.gh_token || !state.gh_repo}
+              className="flex-1 px-4 py-2 border border-[var(--accent)] rounded-lg text-sm text-[var(--accent)] hover:bg-[var(--accent)] hover:text-white disabled:opacity-30 disabled:cursor-not-allowed"
+            >
+              📥 Загрузить
+            </button>
+            <button
+              onClick={handleSyncSave}
+              disabled={syncStatus.type === 'loading' || !state.gh_token || !state.gh_repo}
+              className="flex-1 px-4 py-2 bg-[var(--accent)] text-white rounded-lg text-sm font-semibold disabled:opacity-30 disabled:cursor-not-allowed"
+            >
+              📤 Сохранить
+            </button>
+          </div>
+          {(!state.gh_token || !state.gh_repo) && (
+            <p className="text-xs text-[var(--text-dim)] italic">
+              Заполните токен и репозиторий выше, чтобы активировать кнопки
+            </p>
           )}
           {syncStatus.text && (
             <p className={`text-sm ${syncStatus.type === 'err' ? 'text-[var(--danger)]' : syncStatus.type === 'ok' ? 'text-[var(--good)]' : 'text-[var(--text-dim)]'}`}>
               {syncStatus.text}
             </p>
           )}
+          
+          {/* Auto-sync toggle */}
+          <div className="flex items-center gap-2 pt-2 border-t border-[var(--line)]">
+            <input
+              type="checkbox"
+              id="auto-sync"
+              checked={state.gh_auto_sync}
+              onChange={e => setState(prev => ({ ...prev, gh_auto_sync: e.target.checked }))}
+              className="w-4 h-4"
+            />
+            <label htmlFor="auto-sync" className="text-sm text-[var(--text)]">
+              Автосинхронизация после каждого действия
+            </label>
+          </div>
+          <p className="text-xs text-[var(--text-dim)]">
+            Данные автоматически сохраняются на GitHub через 3 секунды после записи действия
+          </p>
         </div>
       </div>
 

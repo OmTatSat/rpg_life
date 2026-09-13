@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { AppState, loadState, saveState } from './store';
-import { fetchFromGitHub, mergeState } from './github';
+import { fetchFromGitHub, saveToGitHub, mergeState } from './github';
 import Dashboard from './components/Dashboard';
 import ActionLogger from './components/ActionLogger';
 import Goals from './components/Goals';
@@ -51,8 +51,13 @@ export default function App() {
     prevHistoryLength.current = state.history.length;
   }, [state.history.length, state.history, state.categories]);
 
-  // Auto-sync from GitHub on load
+  // Auto-sync from GitHub on load and after changes
   const [syncNotice, setSyncNotice] = useState<string | null>(null);
+  const [syncing, setSyncing] = useState(false);
+  const lastSyncTimeRef = useRef<number>(0);
+  const prevHistoryLengthRef = useRef(state.history.length);
+
+  // Load from GitHub on mount
   useEffect(() => {
     if (state.gh_token && state.gh_repo) {
       fetchFromGitHub(state).then(remote => {
@@ -67,6 +72,34 @@ export default function App() {
       });
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Auto-save to GitHub after changes (debounced)
+  useEffect(() => {
+    if (!state.gh_token || !state.gh_repo || !state.gh_auto_sync) return;
+    if (state.history.length === prevHistoryLengthRef.current) return;
+    
+    prevHistoryLengthRef.current = state.history.length;
+    
+    // Debounce: wait 3 seconds after last change
+    const timeout = setTimeout(() => {
+      if (syncing) return;
+      setSyncing(true);
+      saveToGitHub(state)
+        .then(() => {
+          lastSyncTimeRef.current = Date.now();
+          setSyncNotice(`Автосохранение на GitHub (${new Date().toLocaleTimeString()})`);
+          setTimeout(() => setSyncNotice(null), 3000);
+        })
+        .catch((e: Error) => {
+          console.error('Auto-save failed:', e);
+          setSyncNotice(`Ошибка автосохранения: ${e.message}`);
+          setTimeout(() => setSyncNotice(null), 5000);
+        })
+        .finally(() => setSyncing(false));
+    }, 3000);
+
+    return () => clearTimeout(timeout);
+  }, [state.history.length, state.gh_token, state.gh_repo, state.gh_auto_sync]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -106,13 +139,26 @@ export default function App() {
             </button>
           )}
           {state.gh_token && state.gh_repo ? (
-            <span className="text-xs text-[var(--good)]">● GitHub</span>
+            <div className="flex items-center gap-2">
+              {syncing ? (
+                <span className="text-xs text-[var(--warn)] animate-pulse">⟳ GitHub</span>
+              ) : (
+                <span className="text-xs text-[var(--good)]">● GitHub</span>
+              )}
+              <button
+                onClick={() => setActiveTab('settings')}
+                className="text-xs text-[var(--text-dim)] hover:text-[var(--text)]"
+                title="Настройки синхронизации"
+              >
+                ⚙
+              </button>
+            </div>
           ) : (
             <button
               onClick={() => setActiveTab('settings')}
               className="text-xs text-[var(--warn)] hover:underline"
             >
-              ⚠ GitHub
+              ⚠ GitHub не настроен
             </button>
           )}
         </div>
