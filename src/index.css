@@ -110,4 +110,34 @@
   .chip-quick:active {
     transform: translateY(0);
   }
+
+  .line-clamp-2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  /* Sidebar animations */
+  .sidebar-card {
+    transition: all 0.3s ease;
+  }
+
+  .sidebar-card:hover {
+    border-color: var(--accent);
+    transform: translateX(-2px);
+  }
+
+  /* Mobile compact view */
+  @media (max-width: 1023px) {
+    .mobile-goals-preview {
+      display: block;
+    }
+  }
+
+  @media (min-width: 1024px) {
+    .mobile-goals-preview {
+      display: none;
+    }
+  }
 }

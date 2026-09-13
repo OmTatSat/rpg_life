@@ -8,6 +8,8 @@ import Seeds from './components/Seeds';
 import Brainstorm from './components/Brainstorm';
 import Shop from './components/Shop';
 import Settings from './components/Settings';
+import MotivatorSidebar from './components/Motivators';
+import GoalsSidebar from './components/GoalsSidebar';
 
 type Tab = 'dashboard' | 'log' | 'goals' | 'seeds' | 'brainstorm' | 'shop' | 'settings';
 
@@ -116,15 +118,26 @@ export default function App() {
         </div>
       </header>
 
-      {/* Main Content */}
-      <main className="flex-1 max-w-lg mx-auto w-full px-4 py-4 pb-20">
-        {activeTab === 'dashboard' && <Dashboard state={state} />}
-        {activeTab === 'log' && <ActionLogger state={state} setState={setState} />}
-        {activeTab === 'goals' && <Goals state={state} setState={setState} />}
-        {activeTab === 'seeds' && <Seeds state={state} setState={setState} />}
-        {activeTab === 'brainstorm' && <Brainstorm state={state} setState={setState} />}
-        {activeTab === 'shop' && <Shop state={state} setState={setState} />}
-        {activeTab === 'settings' && <Settings state={state} setState={setState} />}
+      {/* Main Content with Sidebars */}
+      <main className="flex-1 w-full px-4 py-4 pb-20 max-w-7xl mx-auto">
+        <div className="flex gap-6 justify-center">
+          {/* Left Sidebar - Motivators (desktop only) */}
+          <MotivatorSidebar state={state} />
+
+          {/* Center Content */}
+          <div className="flex-1 max-w-lg min-w-0">
+            {activeTab === 'dashboard' && <Dashboard state={state} />}
+            {activeTab === 'log' && <ActionLogger state={state} setState={setState} />}
+            {activeTab === 'goals' && <Goals state={state} setState={setState} />}
+            {activeTab === 'seeds' && <Seeds state={state} setState={setState} />}
+            {activeTab === 'brainstorm' && <Brainstorm state={state} setState={setState} />}
+            {activeTab === 'shop' && <Shop state={state} setState={setState} />}
+            {activeTab === 'settings' && <Settings state={state} setState={setState} />}
+          </div>
+
+          {/* Right Sidebar - Goals (desktop only) */}
+          <GoalsSidebar state={state} />
+        </div>
       </main>
 
       {/* Bottom Navigation */}

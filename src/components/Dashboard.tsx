@@ -179,6 +179,31 @@ export default function Dashboard({ state }: Props) {
           </div>
         </div>
       )}
+
+      {/* Mobile: Active Goals Preview (only on mobile/tablet) */}
+      <div className="mobile-goals-preview lg:hidden">
+        {state.goals.filter(g => g.status === 'active').length > 0 && (
+          <div>
+            <h3 className="text-sm font-semibold mb-3 text-[var(--text-dim)]">🎯 Активные цели</h3>
+            <div className="space-y-2">
+              {state.goals.filter(g => g.status === 'active').slice(0, 3).map(goal => {
+                const cat = state.categories.find(c => c.id === goal.category_id);
+                const doneCount = goal.steps.filter(s => s.status === 'done').length;
+                const progress = goal.steps.length > 0 ? (doneCount / goal.steps.length) * 100 : 0;
+                return (
+                  <div key={goal.id} className="glass-panel p-3 border-l-3" style={{ borderLeftColor: cat?.color || 'var(--accent)' }}>
+                    <div className="text-sm font-semibold">{goal.title}</div>
+                    <div className="text-xs text-[var(--text-dim)] mt-1">{doneCount}/{goal.steps.length} шагов</div>
+                    <div className="h-1 bg-[var(--panel-2)] rounded-full mt-2 overflow-hidden">
+                      <div className="h-full rounded-full" style={{ width: `${progress}%`, background: cat?.color || 'var(--accent)' }} />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
