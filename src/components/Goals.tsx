@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { AppState, Goal, genId } from '../store';
+import { AppState, Goal, RecurringGoal, genId, checkPeriodReset, calculateRecurringProgress } from '../store';
 import { callGoalPlanner, callGemini } from '../api';
 
 interface Props {
@@ -9,11 +9,18 @@ interface Props {
 
 export default function Goals({ state, setState }: Props) {
   const [showForm, setShowForm] = useState(false);
+  const [goalType, setGoalType] = useState<'longterm' | 'recurring'>('longterm');
   const [newGoalCat, setNewGoalCat] = useState(state.categories[0]?.id || '');
   const [newGoalText, setNewGoalText] = useState('');
   const [planStatus, setPlanStatus] = useState('');
   const [refineInputs, setRefineInputs] = useState<Record<string, string>>({});
   const [refineStatus, setRefineStatus] = useState<Record<string, string>>({});
+  
+  // Recurring goal form state
+  const [recurringTitle, setRecurringTitle] = useState('');
+  const [recurringTarget, setRecurringTarget] = useState('150');
+  const [recurringUnit, setRecurringUnit] = useState('минут');
+  const [recurringPeriod, setRecurringPeriod] = useState<'daily' | 'weekly' | 'monthly'>('weekly');
 
   const generatePlan = async () => {
     if (!newGoalText.trim()) return;
@@ -39,6 +46,57 @@ export default function Goals({ state, setState }: Props) {
     } catch (e: any) {
       setPlanStatus(e.message);
     }
+  };
+
+  const createRecurringGoal = () => {
+    if (!recurringTitle.trim() || !recurringTarget) return;
+    const cat = state.categories.find(c => c.id === newGoalCat);
+    if (!cat) return;
+
+    const now = new Date();
+    const periodStart = new Date(now);
+    periodStart.setHours(0, 0, 0, 0);
+    
+    if (recurringPeriod === 'weekly') {
+      const day = periodStart.getDay();
+      const diff = day === 0 ? 6 : day - 1;
+      periodStart.setDate(periodStart.getDate() - diff);
+    } else if (recurringPeriod === 'monthly') {
+      periodStart.setDate(1);
+    }
+
+    const goal: RecurringGoal = {
+      id: genId(),
+      category_id: cat.id,
+      title: recurringTitle,
+      target_value: parseFloat(recurringTarget),
+      unit: recurringUnit,
+      period: recurringPeriod,
+      current_value: 0,
+      period_start: periodStart.toISOString(),
+      created_at: now.toISOString(),
+    };
+
+    setState(prev => ({ ...prev, recurring_goals: [...prev.recurring_goals, goal] }));
+    setShowForm(false);
+    setRecurringTitle('');
+    setRecurringTarget('150');
+    setRecurringUnit('минут');
+  };
+
+  const deleteRecurringGoal = (goalId: string) => {
+    if (!confirm('Удалить эту повторяющуюся цель?')) return;
+    setState(prev => ({ ...prev, recurring_goals: prev.recurring_goals.filter(g => g.id !== goalId) }));
+  };
+
+  const resetRecurringGoal = (goalId: string) => {
+    const now = new Date();
+    setState(prev => ({
+      ...prev,
+      recurring_goals: prev.recurring_goals.map(g => 
+        g.id === goalId ? { ...g, current_value: 0, period_start: now.toISOString() } : g
+      ),
+    }));
   };
 
   const pickPlanOption = (goalId: string, optionIdx: number) => {
@@ -189,6 +247,30 @@ export default function Goals({ state, setState }: Props) {
 
         {showForm && (
           <div className="space-y-3 animate-slide-up">
+            {/* Goal Type Switcher */}
+            <div className="flex gap-2">
+              <button
+                onClick={() => setGoalType('longterm')}
+                className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-colors ${
+                  goalType === 'longterm'
+                    ? 'bg-[var(--accent)] text-white'
+                    : 'bg-[var(--panel-2)] text-[var(--text-dim)] hover:text-[var(--text)]'
+                }`}
+              >
+                🎯 Долгосрочная
+              </button>
+              <button
+                onClick={() => setGoalType('recurring')}
+                className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-colors ${
+                  goalType === 'recurring'
+                    ? 'bg-[var(--accent)] text-white'
+                    : 'bg-[var(--panel-2)] text-[var(--text-dim)] hover:text-[var(--text)]'
+                }`}
+              >
+                🔄 Повторяющаяся
+              </button>
+            </div>
+
             <select
               value={newGoalCat}
               onChange={e => setNewGoalCat(e.target.value)}
@@ -198,20 +280,67 @@ export default function Goals({ state, setState }: Props) {
                 <option key={c.id} value={c.id}>{c.name} (вес {c.weight})</option>
               ))}
             </select>
-            <textarea
-              value={newGoalText}
-              onChange={e => setNewGoalText(e.target.value)}
-              placeholder="Опиши цель своими словами..."
-              className="w-full min-h-[60px] bg-[var(--panel-2)] border border-[var(--line)] rounded-lg p-3 text-sm text-[var(--text)] resize-y focus:outline-none focus:border-[var(--accent)]"
-            />
-            <button
-              onClick={generatePlan}
-              disabled={!newGoalText.trim()}
-              className="w-full bg-[var(--accent)] text-white rounded-lg py-2.5 font-semibold text-sm disabled:opacity-50"
-            >
-              Сгенерировать варианты плана
-            </button>
-            {planStatus && <p className="text-sm text-[var(--text-dim)]">{planStatus}</p>}
+
+            {goalType === 'longterm' ? (
+              <>
+                <textarea
+                  value={newGoalText}
+                  onChange={e => setNewGoalText(e.target.value)}
+                  placeholder="Опиши цель своими словами..."
+                  className="w-full min-h-[60px] bg-[var(--panel-2)] border border-[var(--line)] rounded-lg p-3 text-sm text-[var(--text)] resize-y focus:outline-none focus:border-[var(--accent)]"
+                />
+                <button
+                  onClick={generatePlan}
+                  disabled={!newGoalText.trim()}
+                  className="w-full bg-[var(--accent)] text-white rounded-lg py-2.5 font-semibold text-sm disabled:opacity-50"
+                >
+                  Сгенерировать варианты плана
+                </button>
+                {planStatus && <p className="text-sm text-[var(--text-dim)]">{planStatus}</p>}
+              </>
+            ) : (
+              <>
+                <input
+                  type="text"
+                  value={recurringTitle}
+                  onChange={e => setRecurringTitle(e.target.value)}
+                  placeholder="Название (например: Тренировки)"
+                  className="w-full bg-[var(--panel-2)] border border-[var(--line)] rounded-lg p-2.5 text-sm text-[var(--text)] focus:outline-none focus:border-[var(--accent)]"
+                />
+                <div className="flex gap-2">
+                  <input
+                    type="number"
+                    value={recurringTarget}
+                    onChange={e => setRecurringTarget(e.target.value)}
+                    placeholder="150"
+                    className="flex-1 bg-[var(--panel-2)] border border-[var(--line)] rounded-lg p-2.5 text-sm text-[var(--text)] focus:outline-none focus:border-[var(--accent)]"
+                  />
+                  <input
+                    type="text"
+                    value={recurringUnit}
+                    onChange={e => setRecurringUnit(e.target.value)}
+                    placeholder="минут"
+                    className="flex-1 bg-[var(--panel-2)] border border-[var(--line)] rounded-lg p-2.5 text-sm text-[var(--text)] focus:outline-none focus:border-[var(--accent)]"
+                  />
+                </div>
+                <select
+                  value={recurringPeriod}
+                  onChange={e => setRecurringPeriod(e.target.value as 'daily' | 'weekly' | 'monthly')}
+                  className="w-full bg-[var(--panel-2)] border border-[var(--line)] rounded-lg p-2.5 text-sm text-[var(--text)]"
+                >
+                  <option value="daily">Ежедневно</option>
+                  <option value="weekly">Еженедельно</option>
+                  <option value="monthly">Ежемесячно</option>
+                </select>
+                <button
+                  onClick={createRecurringGoal}
+                  disabled={!recurringTitle.trim() || !recurringTarget}
+                  className="w-full bg-[var(--accent)] text-white rounded-lg py-2.5 font-semibold text-sm disabled:opacity-50"
+                >
+                  Создать повторяющуюся цель
+                </button>
+              </>
+            )}
           </div>
         )}
       </div>
@@ -331,6 +460,85 @@ export default function Goals({ state, setState }: Props) {
           })}
         </div>
       )}
+
+      {/* Recurring Goals Section */}
+      <div className="mt-8">
+        <h3 className="text-sm font-semibold mb-3 text-[var(--text-dim)]">🔄 Повторяющиеся цели</h3>
+        
+        {state.recurring_goals.length === 0 ? (
+          <div className="glass-panel p-6 text-center">
+            <p className="text-sm text-[var(--text-dim)]">Пока нет повторяющихся целей</p>
+            <p className="text-xs text-[var(--text-dim)] mt-1">Нажми «+ Новая цель» и выбери тип «Повторяющаяся»</p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {state.recurring_goals.map(goal => {
+              const cat = state.categories.find(c => c.id === goal.category_id);
+              const updatedGoal = checkPeriodReset(goal);
+              const progress = calculateRecurringProgress(state, updatedGoal);
+              const percentage = Math.min(100, (progress / updatedGoal.target_value) * 100);
+              
+              const periodLabel = {
+                daily: 'сегодня',
+                weekly: 'на этой неделе',
+                monthly: 'в этом месяце',
+              }[updatedGoal.period];
+
+              return (
+                <div key={goal.id} className="glass-panel p-4 border-l-3" style={{ borderLeftColor: cat?.color || 'var(--accent)' }}>
+                  <div className="flex justify-between items-start mb-2">
+                    <div className="flex-1">
+                      <div className="font-semibold text-sm">{updatedGoal.title}</div>
+                      <div className="text-xs text-[var(--text-dim)] mt-1">
+                        {cat?.name} · {periodLabel}
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => resetRecurringGoal(updatedGoal.id)}
+                        className="text-xs px-2 py-1 border border-[var(--line)] rounded text-[var(--text-dim)] hover:text-[var(--text)]"
+                        title="Сбросить прогресс"
+                      >
+                        ↻
+                      </button>
+                      <button
+                        onClick={() => deleteRecurringGoal(updatedGoal.id)}
+                        className="text-[var(--text-dim)] hover:text-[var(--danger)] text-lg"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="mb-2">
+                    <div className="flex justify-between text-xs mb-1">
+                      <span className="text-[var(--text-dim)]">
+                        {Math.round(progress)} / {updatedGoal.target_value} {updatedGoal.unit}
+                      </span>
+                      <span className="text-[var(--text-dim)]">{Math.round(percentage)}%</span>
+                    </div>
+                    <div className="h-2 bg-[var(--panel-2)] rounded-full overflow-hidden">
+                      <div
+                        className="h-full rounded-full transition-all duration-500"
+                        style={{
+                          width: `${percentage}%`,
+                          background: percentage >= 100 ? 'var(--good)' : cat?.color || 'var(--accent)',
+                        }}
+                      />
+                    </div>
+                  </div>
+
+                  {percentage >= 100 && (
+                    <div className="text-xs text-[var(--good)] font-semibold mt-2">
+                      ✅ Цель достигнута!
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

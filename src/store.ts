@@ -23,6 +23,18 @@ export interface GoalStep {
   status: 'pending' | 'done';
 }
 
+export interface RecurringGoal {
+  id: string;
+  category_id: string;
+  title: string;
+  target_value: number;
+  unit: string;
+  period: 'daily' | 'weekly' | 'monthly';
+  current_value: number;
+  period_start: string;
+  created_at: string;
+}
+
 export interface Goal {
   id: string;
   category_id: string;
@@ -124,6 +136,7 @@ export interface AppState {
   categories: Category[];
   history: HistoryEntry[];
   goals: Goal[];
+  recurring_goals: RecurringGoal[];
   supplements_log: SupplementEntry[];
   seeds: Seed[];
   artifacts: Artifact[];
@@ -153,6 +166,7 @@ export function createDefaultState(): AppState {
     categories: DEFAULT_CATEGORIES,
     history: [],
     goals: [],
+    recurring_goals: [],
     supplements_log: [],
     seeds: [],
     artifacts: [],
@@ -284,6 +298,77 @@ export function getQuickTemplates(state: AppState, catId: string): string[] {
   return result;
 }
 
+// Recurring goals helpers
+export function getPeriodStart(period: 'daily' | 'weekly' | 'monthly', now: Date = new Date()): Date {
+  const start = new Date(now);
+  start.setHours(0, 0, 0, 0);
+  
+  if (period === 'daily') {
+    return start;
+  } else if (period === 'weekly') {
+    const day = start.getDay();
+    const diff = day === 0 ? 6 : day - 1; // Monday as first day
+    start.setDate(start.getDate() - diff);
+    return start;
+  } else { // monthly
+    start.setDate(1);
+    return start;
+  }
+}
+
+export function checkPeriodReset(goal: RecurringGoal): RecurringGoal {
+  const now = new Date();
+  const periodStart = getPeriodStart(goal.period, now);
+  const goalPeriodStart = new Date(goal.period_start);
+  
+  if (periodStart > goalPeriodStart) {
+    return { ...goal, current_value: 0, period_start: periodStart.toISOString() };
+  }
+  return goal;
+}
+
+export function extractDurationFromText(text: string): number | null {
+  // Match patterns like "40 минут", "1.5 часа", "90 мин"
+  const patterns = [
+    /(\d+(?:\.\d+)?)\s*(?:минут|мин|minutes?|min)/i,
+    /(\d+(?:\.\d+)?)\s*(?:час(?:а|ов)?|hours?|hrs?)/i,
+  ];
+  
+  for (const pattern of patterns) {
+    const match = text.match(pattern);
+    if (match) {
+      const value = parseFloat(match[1]);
+      if (pattern.toString().includes('час')) {
+        return value * 60; // Convert hours to minutes
+      }
+      return value;
+    }
+  }
+  return null;
+}
+
+export function calculateRecurringProgress(
+  state: AppState,
+  goal: RecurringGoal
+): number {
+  const periodStart = new Date(goal.period_start);
+  let total = 0;
+  
+  for (const entry of state.history) {
+    const entryDate = new Date(entry.timestamp);
+    if (entryDate < periodStart) continue;
+    if (entry.category_id !== goal.category_id) continue;
+    
+    // Try to extract duration from text
+    const duration = extractDurationFromText(entry.text);
+    if (duration !== null) {
+      total += duration;
+    }
+  }
+  
+  return total;
+}
+
 // Achievements definitions
 export const ACHIEVEMENTS: Achievement[] = [
   {
@@ -406,6 +491,7 @@ export function loadState(): AppState {
         categories: parsed.categories || DEFAULT_CATEGORIES,
         history: parsed.history || [],
         goals: parsed.goals || [],
+        recurring_goals: parsed.recurring_goals || [],
         supplements_log: parsed.supplements_log || [],
         seeds: parsed.seeds || [],
         artifacts: parsed.artifacts || [],

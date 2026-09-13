@@ -1,5 +1,5 @@
 import React from 'react';
-import { AppState, deriveLevel, getCategoryTotalXp } from '../store';
+import { AppState, deriveLevel, getCategoryTotalXp, checkPeriodReset, calculateRecurringProgress } from '../store';
 
 interface Props {
   state: AppState;
@@ -8,8 +8,9 @@ interface Props {
 export default function GoalsSidebar({ state }: Props) {
   const activeGoals = state.goals.filter(g => g.status === 'active').slice(0, 3);
   const planningGoals = state.goals.filter(g => g.status === 'planning').slice(0, 2);
+  const recurringGoals = (state.recurring_goals || []).slice(0, 3);
 
-  if (activeGoals.length === 0 && planningGoals.length === 0) {
+  if (activeGoals.length === 0 && planningGoals.length === 0 && recurringGoals.length === 0) {
     return (
       <aside className="hidden lg:flex flex-col gap-4 w-64 flex-shrink-0 sticky top-4 self-start">
         <div className="glass-panel p-4">
@@ -71,6 +72,39 @@ export default function GoalsSidebar({ state }: Props) {
                 <div key={goal.id} className="border-l-2 pl-3 border-[var(--warn)]">
                   <div className="text-xs font-semibold mb-1 line-clamp-2">{goal.title}</div>
                   <div className="text-xs text-[var(--warn)]">Выберите подход</div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Recurring Goals */}
+      {recurringGoals.length > 0 && (
+        <div className="glass-panel p-4">
+          <div className="text-xs text-[var(--text-dim)] mb-3 uppercase tracking-wider">🔄 Повторяющиеся</div>
+          <div className="space-y-3">
+            {recurringGoals.map(goal => {
+              const cat = state.categories.find(c => c.id === goal.category_id);
+              const updatedGoal = checkPeriodReset(goal);
+              const progress = calculateRecurringProgress(state, updatedGoal);
+              const percentage = Math.min(100, (progress / updatedGoal.target_value) * 100);
+              
+              return (
+                <div key={goal.id} className="border-l-2 pl-3" style={{ borderColor: cat?.color || 'var(--accent)' }}>
+                  <div className="text-xs font-semibold mb-1 line-clamp-2">{updatedGoal.title}</div>
+                  <div className="text-xs text-[var(--text-dim)] mb-2">
+                    {Math.round(progress)}/{updatedGoal.target_value} {updatedGoal.unit}
+                  </div>
+                  <div className="h-1 bg-[var(--panel-2)] rounded-full overflow-hidden">
+                    <div
+                      className="h-full rounded-full transition-all duration-500"
+                      style={{
+                        width: `${percentage}%`,
+                        background: percentage >= 100 ? 'var(--good)' : cat?.color || 'var(--accent)',
+                      }}
+                    />
+                  </div>
                 </div>
               );
             })}
