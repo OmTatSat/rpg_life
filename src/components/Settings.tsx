@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { AppState, ACHIEVEMENTS, calculateStreak, deriveLevel, getCategoryTotalXp, getTotalXp } from '../store';
+import { AppState, ACHIEVEMENTS, calculateStreak, deriveLevel, getCategoryTotalXp, getTotalXp, createDefaultState } from '../store';
 import { fetchFromGitHub, saveToGitHub, mergeState } from '../github';
 
 interface Props {
@@ -67,15 +67,24 @@ export default function Settings({ state, setState }: Props) {
         try {
           const data = JSON.parse(ev.target?.result as string);
           if (!data.categories) throw new Error('bad shape');
+          const defaults = createDefaultState();
           setState(() => ({
+            ...defaults,
             ...data,
+            categories: data.categories || defaults.categories,
+            history: data.history || [],
             goals: data.goals || [],
             supplements_log: data.supplements_log || [],
             seeds: data.seeds || [],
             artifacts: data.artifacts || [],
             daily_quests: data.daily_quests || [],
+            gold: data.gold || 0,
+            shop_items: data.shop_items || defaults.shop_items,
             apiKey: data.apiKey || '',
             modelName: data.modelName || 'gemini-flash-lite-latest',
+            gh_token: data.gh_token || '',
+            gh_repo: data.gh_repo || '',
+            gh_file_path: data.gh_file_path || 'data/life-rpg-v2.json',
           }));
           alert('Данные импортированы!');
         } catch {
@@ -162,6 +171,9 @@ export default function Settings({ state, setState }: Props) {
           </div>
           <p className="text-xs text-[var(--text-dim)]">
             Создай приватный репозиторий и <a href="https://github.com/settings/tokens" target="_blank" rel="noreferrer" className="text-[var(--accent)] hover:underline">Personal Access Token</a> с правами <code className="bg-[var(--panel-2)] px-1 rounded">repo</code>. Токен хранится только в этом браузере.
+          </p>
+          <p className="text-xs text-[var(--warn)]">
+            ⚠️ По умолчанию путь <code className="bg-[var(--panel-2)] px-1 rounded">data/life-rpg-v2.json</code> — это отдельный файл, чтобы не затирать данные из старой версии. Если хочешь мигрировать старые данные — используй Экспорт/Импорт JSON ниже.
           </p>
           {state.gh_token && state.gh_repo && (
             <div className="flex gap-2">

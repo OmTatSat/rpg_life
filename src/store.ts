@@ -152,7 +152,7 @@ export function createDefaultState(): AppState {
     modelName: 'gemini-flash-lite-latest',
     gh_token: '',
     gh_repo: '',
-    gh_file_path: 'data/life-rpg.json',
+    gh_file_path: 'data/life-rpg-v2.json',
   };
 }
 
@@ -396,7 +396,7 @@ export function loadState(): AppState {
         modelName: parsed.modelName || 'gemini-flash-lite-latest',
         gh_token: parsed.gh_token || '',
         gh_repo: parsed.gh_repo || '',
-        gh_file_path: parsed.gh_file_path || 'data/life-rpg.json',
+        gh_file_path: parsed.gh_file_path || 'data/life-rpg-v2.json',
       };
     }
   } catch (e) {
