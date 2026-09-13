@@ -20,6 +20,7 @@ export default function Goals({ state, setState }: Props) {
   const [recurringTitle, setRecurringTitle] = useState('');
   const [recurringTarget, setRecurringTarget] = useState('150');
   const [recurringUnit, setRecurringUnit] = useState('минут');
+  const [recurringUnitValue, setRecurringUnitValue] = useState('1');
   const [recurringPeriod, setRecurringPeriod] = useState<'daily' | 'weekly' | 'monthly'>('weekly');
 
   const generatePlan = async () => {
@@ -71,6 +72,7 @@ export default function Goals({ state, setState }: Props) {
       title: recurringTitle,
       target_value: parseFloat(recurringTarget),
       unit: recurringUnit,
+      unit_value: parseFloat(recurringUnitValue) || 1,
       period: recurringPeriod,
       current_value: 0,
       period_start: periodStart.toISOString(),
@@ -82,6 +84,7 @@ export default function Goals({ state, setState }: Props) {
     setRecurringTitle('');
     setRecurringTarget('150');
     setRecurringUnit('минут');
+    setRecurringUnitValue('1');
   };
 
   const deleteRecurringGoal = (goalId: string) => {
@@ -96,6 +99,30 @@ export default function Goals({ state, setState }: Props) {
       recurring_goals: prev.recurring_goals.map(g => 
         g.id === goalId ? { ...g, current_value: 0, period_start: now.toISOString() } : g
       ),
+    }));
+  };
+
+  const addProgress = (goalId: string, amount: number) => {
+    setState(prev => ({
+      ...prev,
+      recurring_goals: prev.recurring_goals.map(g => 
+        g.id === goalId ? { ...g, current_value: g.current_value + amount } : g
+      ),
+    }));
+  };
+
+  const toggleCompleted = (goalId: string) => {
+    setState(prev => ({
+      ...prev,
+      recurring_goals: prev.recurring_goals.map(g => {
+        if (g.id !== goalId) return g;
+        // Если уже выполнено сегодня (в пределах unit_value), сбрасываем
+        if (g.current_value >= g.unit_value) {
+          return { ...g, current_value: 0 };
+        }
+        // Иначе добавляем unit_value
+        return { ...g, current_value: g.current_value + g.unit_value };
+      }),
     }));
   };
 
@@ -323,6 +350,18 @@ export default function Goals({ state, setState }: Props) {
                     className="flex-1 bg-[var(--panel-2)] border border-[var(--line)] rounded-lg p-2.5 text-sm text-[var(--text)] focus:outline-none focus:border-[var(--accent)]"
                   />
                 </div>
+                <div>
+                  <label className="text-xs text-[var(--text-dim)] block mb-1">За одно выполнение</label>
+                  <input
+                    type="number"
+                    value={recurringUnitValue}
+                    onChange={e => setRecurringUnitValue(e.target.value)}
+                    placeholder="1"
+                    min="1"
+                    className="w-full bg-[var(--panel-2)] border border-[var(--line)] rounded-lg p-2.5 text-sm text-[var(--text)] focus:outline-none focus:border-[var(--accent)]"
+                  />
+                  <p className="text-xs text-[var(--text-dim)] mt-1">Сколько единиц за один клик/выполнение</p>
+                </div>
                 <select
                   value={recurringPeriod}
                   onChange={e => setRecurringPeriod(e.target.value as 'daily' | 'weekly' | 'monthly')}
@@ -484,13 +523,15 @@ export default function Goals({ state, setState }: Props) {
                 monthly: 'в этом месяце',
               }[updatedGoal.period];
 
+              const isCompletedToday = progress >= updatedGoal.unit_value;
+
               return (
                 <div key={goal.id} className="glass-panel p-4 border-l-3" style={{ borderLeftColor: cat?.color || 'var(--accent)' }}>
                   <div className="flex justify-between items-start mb-2">
                     <div className="flex-1">
                       <div className="font-semibold text-sm">{updatedGoal.title}</div>
                       <div className="text-xs text-[var(--text-dim)] mt-1">
-                        {cat?.name} · {periodLabel}
+                        {cat?.name} · {periodLabel} · {updatedGoal.unit_value} {updatedGoal.unit}/клик
                       </div>
                     </div>
                     <div className="flex gap-2">
@@ -526,6 +567,25 @@ export default function Goals({ state, setState }: Props) {
                         }}
                       />
                     </div>
+                  </div>
+
+                  {/* Controls */}
+                  <div className="flex gap-2 mt-3">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={isCompletedToday}
+                        onChange={() => toggleCompleted(updatedGoal.id)}
+                        className="w-4 h-4"
+                      />
+                      <span className="text-xs text-[var(--text-dim)]">Выполнил (+{updatedGoal.unit_value} {updatedGoal.unit})</span>
+                    </label>
+                    <button
+                      onClick={() => addProgress(updatedGoal.id, updatedGoal.unit_value)}
+                      className="ml-auto text-xs px-3 py-1 bg-[var(--accent)] text-white rounded hover:opacity-90"
+                    >
+                      + {updatedGoal.unit_value}
+                    </button>
                   </div>
 
                   {percentage >= 100 && (

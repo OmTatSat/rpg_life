@@ -29,6 +29,7 @@ export interface RecurringGoal {
   title: string;
   target_value: number;
   unit: string;
+  unit_value: number; // сколько единиц за одно выполнение
   period: 'daily' | 'weekly' | 'monthly';
   current_value: number;
   period_start: string;
@@ -491,7 +492,10 @@ export function loadState(): AppState {
         categories: parsed.categories || DEFAULT_CATEGORIES,
         history: parsed.history || [],
         goals: parsed.goals || [],
-        recurring_goals: parsed.recurring_goals || [],
+        recurring_goals: (parsed.recurring_goals || []).map((g: any) => ({
+          ...g,
+          unit_value: g.unit_value || 1,
+        })),
         supplements_log: parsed.supplements_log || [],
         seeds: parsed.seeds || [],
         artifacts: parsed.artifacts || [],

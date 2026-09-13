@@ -185,7 +185,7 @@ export default function App() {
           </div>
 
           {/* Right Sidebar - Goals (desktop only) */}
-          <GoalsSidebar state={state} />
+          <GoalsSidebar state={state} setState={setState} />
         </div>
       </main>
 
