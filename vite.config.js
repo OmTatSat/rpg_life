@@ -3,6 +3,7 @@ import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 
 export default defineConfig({
+  base: '/rpg_life/',  // ← ДОБАВИТЬ ЭТУ СТРОКУ
   plugins: [react(), tailwindcss()],
   base: '/rpg_life/',
   server: {
