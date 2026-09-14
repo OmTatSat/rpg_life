@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { AppState, loadState, saveState } from './store';
-import { fetchFromGitHub, saveToGitHub, safeSaveToGitHub, mergeState } from './github';
+import { fetchFromGitHub, saveToGitHub, mergeState } from './github';
 import Dashboard from './components/Dashboard';
 import ActionLogger from './components/ActionLogger';
 import Goals from './components/Goals';
@@ -75,21 +75,19 @@ export default function App() {
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Auto-save to GitHub after changes (debounced)
+  // Auto-save to GitHub after changes (debounced 5 minutes)
   useEffect(() => {
     if (!state.gh_token || !state.gh_repo || !state.gh_auto_sync) return;
     if (state.history.length === prevHistoryLengthRef.current) return;
     
     prevHistoryLengthRef.current = state.history.length;
     
-    // Debounce: wait 3 seconds after last change
+    // Debounce: wait 5 minutes after last change
     const timeout = setTimeout(() => {
       if (syncing) return;
       setSyncing(true);
-      safeSaveToGitHub(state)
-        .then((merged) => {
-          // Update local state with merged data
-          setState(() => merged);
+      saveToGitHub(state)
+        .then(() => {
           lastSyncTimeRef.current = Date.now();
           setSyncNotice(`Автосохранение на GitHub (${new Date().toLocaleTimeString()})`);
           setTimeout(() => setSyncNotice(null), 3000);
@@ -100,7 +98,7 @@ export default function App() {
           setTimeout(() => setSyncNotice(null), 5000);
         })
         .finally(() => setSyncing(false));
-    }, 3000);
+    }, 5 * 60 * 1000); // 5 minutes
 
     return () => clearTimeout(timeout);
   }, [state.history.length, state.gh_token, state.gh_repo, state.gh_auto_sync]); // eslint-disable-line react-hooks/exhaustive-deps
