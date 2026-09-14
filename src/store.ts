@@ -320,12 +320,22 @@ export function getPeriodStart(period: 'daily' | 'weekly' | 'monthly', now: Date
 export function checkPeriodReset(goal: RecurringGoal): RecurringGoal {
   const now = new Date();
   const periodStart = getPeriodStart(goal.period, now);
-  const goalPeriodStart = new Date(goal.period_start);
+  const goalPeriodStart = getPeriodStart(goal.period, new Date(goal.period_start));
   
-  if (periodStart > goalPeriodStart) {
+  // Compare only dates (without time) to avoid timezone issues
+  if (periodStart.getTime() > goalPeriodStart.getTime()) {
     return { ...goal, current_value: 0, period_start: periodStart.toISOString() };
   }
   return goal;
+}
+
+// Migration helper for old data
+export function migrateRecurringGoal(goal: any): RecurringGoal {
+  return {
+    ...goal,
+    unit_value: goal.unit_value || 1,
+    current_value: goal.current_value || 0,
+  };
 }
 
 export function extractDurationFromText(text: string): number | null {
@@ -492,10 +502,7 @@ export function loadState(): AppState {
         categories: parsed.categories || DEFAULT_CATEGORIES,
         history: parsed.history || [],
         goals: parsed.goals || [],
-        recurring_goals: (parsed.recurring_goals || []).map((g: any) => ({
-          ...g,
-          unit_value: g.unit_value || 1,
-        })),
+        recurring_goals: (parsed.recurring_goals || []).map(migrateRecurringGoal),
         supplements_log: parsed.supplements_log || [],
         seeds: parsed.seeds || [],
         artifacts: parsed.artifacts || [],

@@ -1,4 +1,4 @@
-import { AppState } from './store';
+import { AppState, migrateRecurringGoal } from './store';
 
 const GH_API_BASE = 'https://api.github.com';
 
@@ -150,10 +150,7 @@ export function mergeState(local: AppState, remote: AppState): AppState {
     ...local,
     history: mergeById(local.history, remote.history),
     goals: mergeGoals(local.goals, remote.goals),
-    recurring_goals: mergeById(local.recurring_goals || [], remote.recurring_goals || []).map(g => ({
-      ...g,
-      unit_value: g.unit_value || 1,
-    })),
+    recurring_goals: mergeById(local.recurring_goals || [], remote.recurring_goals || []).map(migrateRecurringGoal),
     supplements_log: mergeById(local.supplements_log, remote.supplements_log),
     seeds: mergeById(local.seeds, remote.seeds),
     artifacts: mergeById(local.artifacts, remote.artifacts),

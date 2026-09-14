@@ -1,5 +1,5 @@
 import React from 'react';
-import { AppState, deriveLevel, getCategoryTotalXp, checkPeriodReset, calculateRecurringProgress } from '../store';
+import { AppState, deriveLevel, getCategoryTotalXp, checkPeriodReset, calculateRecurringProgress, migrateRecurringGoal } from '../store';
 
 interface Props {
   state: AppState;
@@ -87,7 +87,8 @@ export default function GoalsSidebar({ state, setState }: Props) {
           <div className="space-y-3">
             {recurringGoals.map(goal => {
               const cat = state.categories.find(c => c.id === goal.category_id);
-              const updatedGoal = checkPeriodReset(goal);
+              const migratedGoal = migrateRecurringGoal(goal);
+              const updatedGoal = checkPeriodReset(migratedGoal);
               // Use current_value directly from the goal object
               const progress = updatedGoal.current_value;
               const percentage = Math.min(100, (progress / updatedGoal.target_value) * 100);

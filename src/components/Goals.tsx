@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { AppState, Goal, RecurringGoal, genId, checkPeriodReset, calculateRecurringProgress } from '../store';
+import { AppState, Goal, RecurringGoal, genId, checkPeriodReset, calculateRecurringProgress, migrateRecurringGoal } from '../store';
 import { callGoalPlanner, callGemini } from '../api';
 
 interface Props {
@@ -513,7 +513,8 @@ export default function Goals({ state, setState }: Props) {
           <div className="space-y-3">
             {state.recurring_goals.map(goal => {
               const cat = state.categories.find(c => c.id === goal.category_id);
-              const updatedGoal = checkPeriodReset(goal);
+              const migratedGoal = migrateRecurringGoal(goal);
+              const updatedGoal = checkPeriodReset(migratedGoal);
               
               const periodLabel = {
                 daily: 'сегодня',
