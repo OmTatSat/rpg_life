@@ -105,9 +105,17 @@ export default function Goals({ state, setState }: Props) {
   const addProgress = (goalId: string, amount: number) => {
     setState(prev => ({
       ...prev,
-      recurring_goals: prev.recurring_goals.map(g => 
-        g.id === goalId ? { ...g, current_value: g.current_value + amount } : g
-      ),
+      recurring_goals: prev.recurring_goals.map(g => {
+        if (g.id !== goalId) return g;
+        // Migration: ensure unit_value exists
+        const unitValue = g.unit_value || 1;
+        const currentValue = g.current_value || 0;
+        return { 
+          ...g, 
+          unit_value: unitValue,
+          current_value: currentValue + amount 
+        };
+      }),
     }));
   };
 
@@ -116,12 +124,16 @@ export default function Goals({ state, setState }: Props) {
       ...prev,
       recurring_goals: prev.recurring_goals.map(g => {
         if (g.id !== goalId) return g;
+        // Migration: ensure unit_value exists
+        const unitValue = g.unit_value || 1;
+        const currentValue = g.current_value || 0;
+        
         // Если уже выполнено сегодня (в пределах unit_value), сбрасываем
-        if (g.current_value >= g.unit_value) {
-          return { ...g, current_value: 0 };
+        if (currentValue >= unitValue) {
+          return { ...g, unit_value: unitValue, current_value: 0 };
         }
         // Иначе добавляем unit_value
-        return { ...g, current_value: g.current_value + g.unit_value };
+        return { ...g, unit_value: unitValue, current_value: currentValue + unitValue };
       }),
     }));
   };

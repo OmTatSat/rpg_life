@@ -362,12 +362,13 @@ export function calculateRecurringProgress(
   state: AppState,
   goal: RecurringGoal
 ): number {
-  const periodStart = new Date(goal.period_start);
+  const periodStart = getPeriodStart(goal.period, new Date(goal.period_start));
   let total = 0;
   
   for (const entry of state.history) {
     const entryDate = new Date(entry.timestamp);
-    if (entryDate < periodStart) continue;
+    // Compare only dates (without time) to avoid timezone issues
+    if (entryDate.getTime() < periodStart.getTime()) continue;
     if (entry.category_id !== goal.category_id) continue;
     
     // Try to extract duration from text

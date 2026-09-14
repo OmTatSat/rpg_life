@@ -119,10 +119,13 @@ export default function GoalsSidebar({ state, setState }: Props) {
                             ...prev,
                             recurring_goals: prev.recurring_goals.map(g => {
                               if (g.id !== updatedGoal.id) return g;
-                              if (g.current_value >= g.unit_value) {
-                                return { ...g, current_value: 0 };
+                              // Migration: ensure unit_value exists
+                              const unitValue = g.unit_value || 1;
+                              const currentValue = g.current_value || 0;
+                              if (currentValue >= unitValue) {
+                                return { ...g, unit_value: unitValue, current_value: 0 };
                               }
-                              return { ...g, current_value: g.current_value + g.unit_value };
+                              return { ...g, unit_value: unitValue, current_value: currentValue + unitValue };
                             }),
                           }));
                         }}
@@ -134,14 +137,18 @@ export default function GoalsSidebar({ state, setState }: Props) {
                       onClick={() => {
                         setState(prev => ({
                           ...prev,
-                          recurring_goals: prev.recurring_goals.map(g => 
-                            g.id === updatedGoal.id ? { ...g, current_value: g.current_value + g.unit_value } : g
-                          ),
+                          recurring_goals: prev.recurring_goals.map(g => {
+                            if (g.id !== updatedGoal.id) return g;
+                            // Migration: ensure unit_value exists
+                            const unitValue = g.unit_value || 1;
+                            const currentValue = g.current_value || 0;
+                            return { ...g, unit_value: unitValue, current_value: currentValue + unitValue };
+                          }),
                         }));
                       }}
                       className="ml-auto text-xs px-2 py-0.5 bg-[var(--accent)] text-white rounded hover:opacity-90"
                     >
-                      +{updatedGoal.unit_value}
+                      +{updatedGoal.unit_value || 1}
                     </button>
                   </div>
                 </div>
