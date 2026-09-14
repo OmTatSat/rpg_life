@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { AppState, loadState, saveState } from './store';
-import { fetchFromGitHub, saveToGitHub, mergeState } from './github';
+import { fetchFromGitHub, saveToGitHub, safeSaveToGitHub, mergeState } from './github';
 import Dashboard from './components/Dashboard';
 import ActionLogger from './components/ActionLogger';
 import Goals from './components/Goals';
@@ -86,8 +86,10 @@ export default function App() {
     const timeout = setTimeout(() => {
       if (syncing) return;
       setSyncing(true);
-      saveToGitHub(state)
-        .then(() => {
+      safeSaveToGitHub(state)
+        .then((merged) => {
+          // Update local state with merged data
+          setState(() => merged);
           lastSyncTimeRef.current = Date.now();
           setSyncNotice(`Автосохранение на GitHub (${new Date().toLocaleTimeString()})`);
           setTimeout(() => setSyncNotice(null), 3000);

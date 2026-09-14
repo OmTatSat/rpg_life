@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { AppState, ACHIEVEMENTS, calculateStreak, deriveLevel, getCategoryTotalXp, getTotalXp, createDefaultState } from '../store';
-import { fetchFromGitHub, saveToGitHub, mergeState } from '../github';
+import { fetchFromGitHub, saveToGitHub, safeSaveToGitHub, mergeState } from '../github';
 
 interface Props {
   state: AppState;
@@ -29,9 +29,11 @@ export default function Settings({ state, setState }: Props) {
   };
 
   const handleSyncSave = async () => {
-    setSyncStatus({ type: 'loading', text: 'Сохраняю на GitHub...' });
+    setSyncStatus({ type: 'loading', text: 'Загружаю и сохраняю на GitHub...' });
     try {
-      await saveToGitHub(state);
+      const merged = await safeSaveToGitHub(state);
+      // Update local state with merged data
+      setState(() => merged);
       setSyncStatus({ type: 'ok', text: `Сохранено на GitHub (${new Date().toLocaleTimeString()})` });
     } catch (e: any) {
       setSyncStatus({ type: 'err', text: e.message });

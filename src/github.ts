@@ -88,6 +88,20 @@ export async function saveToGitHub(state: AppState): Promise<void> {
   }
 }
 
+// Safe save: load → merge → save
+export async function safeSaveToGitHub(state: AppState): Promise<AppState> {
+  // 1. Load remote data
+  const remote = await fetchFromGitHub(state);
+  
+  // 2. Merge with local
+  const merged = remote ? mergeState(state, remote) : state;
+  
+  // 3. Save merged data
+  await saveToGitHub(merged);
+  
+  return merged;
+}
+
 export function mergeState(local: AppState, remote: AppState): AppState {
   // Merge by ID to avoid duplicates
   const mergeById = <T extends { id: string }>(localArr: T[], remoteArr: T[]): T[] => {
