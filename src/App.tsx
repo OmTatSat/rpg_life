@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { AppState, loadState, saveState } from './store';
-import { fetchFromGitHub, saveToGitHub, mergeState } from './github';
+import { fetchFromGitHub, saveToGitHub, safeSaveToGitHub, mergeState } from './github';
 import Dashboard from './components/Dashboard';
 import ActionLogger from './components/ActionLogger';
 import Goals from './components/Goals';
@@ -75,26 +75,45 @@ export default function App() {
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Auto-save to GitHub after changes (debounced 5 minutes)
+  // Track unsaved changes for offline resilience
+  const hasUnsavedChangesRef = useRef(false);
+  const stateSnapshotRef = useRef<AppState | null>(null);
+
+  // Mark changes as unsaved whenever state changes
+  useEffect(() => {
+    if (state.gh_token && state.gh_repo && state.gh_auto_sync) {
+      hasUnsavedChangesRef.current = true;
+      stateSnapshotRef.current = state;
+    }
+  }, [state]);
+
+  // Auto-save with safe merge (debounced 5 minutes)
   useEffect(() => {
     if (!state.gh_token || !state.gh_repo || !state.gh_auto_sync) return;
-    if (state.history.length === prevHistoryLengthRef.current) return;
-    
-    prevHistoryLengthRef.current = state.history.length;
-    
-    // Debounce: wait 5 minutes after last change
+    if (!hasUnsavedChangesRef.current) return;
+
     const timeout = setTimeout(() => {
       if (syncing) return;
+      if (!navigator.onLine) {
+        // No internet — keep flag, try again later
+        setSyncNotice('⏸ Нет интернета — сохранится позже');
+        setTimeout(() => setSyncNotice(null), 3000);
+        return;
+      }
+
       setSyncing(true);
-      saveToGitHub(state)
-        .then(() => {
+      safeSaveToGitHub(stateSnapshotRef.current || state)
+        .then((merged) => {
+          setState(() => merged);
+          hasUnsavedChangesRef.current = false;
           lastSyncTimeRef.current = Date.now();
-          setSyncNotice(`Автосохранение на GitHub (${new Date().toLocaleTimeString()})`);
+          setSyncNotice(`✅ Сохранено на GitHub (${new Date().toLocaleTimeString()})`);
           setTimeout(() => setSyncNotice(null), 3000);
         })
         .catch((e: Error) => {
           console.error('Auto-save failed:', e);
-          setSyncNotice(`Ошибка автосохранения: ${e.message}`);
+          // Keep flag — will retry on next change or when coming online
+          setSyncNotice(`⚠ Не удалось сохранить: ${e.message}`);
           setTimeout(() => setSyncNotice(null), 5000);
         })
         .finally(() => setSyncing(false));
@@ -102,6 +121,29 @@ export default function App() {
 
     return () => clearTimeout(timeout);
   }, [state.history.length, state.gh_token, state.gh_repo, state.gh_auto_sync]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Retry sync when coming back online
+  useEffect(() => {
+    const handleOnline = () => {
+      if (hasUnsavedChangesRef.current && state.gh_token && state.gh_repo) {
+        setSyncing(true);
+        safeSaveToGitHub(stateSnapshotRef.current || state)
+          .then((merged) => {
+            setState(() => merged);
+            hasUnsavedChangesRef.current = false;
+            setSyncNotice(`✅ Синхронизировано при подключении (${new Date().toLocaleTimeString()})`);
+            setTimeout(() => setSyncNotice(null), 3000);
+          })
+          .catch((e: Error) => {
+            console.error('Online sync failed:', e);
+          })
+          .finally(() => setSyncing(false));
+      }
+    };
+
+    window.addEventListener('online', handleOnline);
+    return () => window.removeEventListener('online', handleOnline);
+  }, [state]);
 
   return (
     <div className="min-h-screen flex flex-col">
