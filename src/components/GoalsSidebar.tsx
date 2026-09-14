@@ -119,13 +119,14 @@ export default function GoalsSidebar({ state, setState }: Props) {
                             ...prev,
                             recurring_goals: prev.recurring_goals.map(g => {
                               if (g.id !== updatedGoal.id) return g;
-                              // Migration: ensure unit_value exists
-                              const unitValue = g.unit_value || 1;
-                              const currentValue = g.current_value || 0;
+                              // First apply period reset
+                              const reset = checkPeriodReset(g);
+                              const unitValue = reset.unit_value || 1;
+                              const currentValue = reset.current_value || 0;
                               if (currentValue >= unitValue) {
-                                return { ...g, unit_value: unitValue, current_value: 0 };
+                                return { ...reset, unit_value: unitValue, current_value: 0 };
                               }
-                              return { ...g, unit_value: unitValue, current_value: currentValue + unitValue };
+                              return { ...reset, unit_value: unitValue, current_value: currentValue + unitValue };
                             }),
                           }));
                         }}
@@ -139,10 +140,11 @@ export default function GoalsSidebar({ state, setState }: Props) {
                           ...prev,
                           recurring_goals: prev.recurring_goals.map(g => {
                             if (g.id !== updatedGoal.id) return g;
-                            // Migration: ensure unit_value exists
-                            const unitValue = g.unit_value || 1;
-                            const currentValue = g.current_value || 0;
-                            return { ...g, unit_value: unitValue, current_value: currentValue + unitValue };
+                            // First apply period reset
+                            const reset = checkPeriodReset(g);
+                            const unitValue = reset.unit_value || 1;
+                            const currentValue = reset.current_value || 0;
+                            return { ...reset, unit_value: unitValue, current_value: currentValue + unitValue };
                           }),
                         }));
                       }}

@@ -107,11 +107,13 @@ export default function Goals({ state, setState }: Props) {
       ...prev,
       recurring_goals: prev.recurring_goals.map(g => {
         if (g.id !== goalId) return g;
+        // First apply period reset
+        const reset = checkPeriodReset(g);
         // Migration: ensure unit_value exists
-        const unitValue = g.unit_value || 1;
-        const currentValue = g.current_value || 0;
+        const unitValue = reset.unit_value || 1;
+        const currentValue = reset.current_value || 0;
         return { 
-          ...g, 
+          ...reset, 
           unit_value: unitValue,
           current_value: currentValue + amount 
         };
@@ -124,16 +126,18 @@ export default function Goals({ state, setState }: Props) {
       ...prev,
       recurring_goals: prev.recurring_goals.map(g => {
         if (g.id !== goalId) return g;
+        // First apply period reset
+        const reset = checkPeriodReset(g);
         // Migration: ensure unit_value exists
-        const unitValue = g.unit_value || 1;
-        const currentValue = g.current_value || 0;
+        const unitValue = reset.unit_value || 1;
+        const currentValue = reset.current_value || 0;
         
         // Если уже выполнено сегодня (в пределах unit_value), сбрасываем
         if (currentValue >= unitValue) {
-          return { ...g, unit_value: unitValue, current_value: 0 };
+          return { ...reset, unit_value: unitValue, current_value: 0 };
         }
         // Иначе добавляем unit_value
-        return { ...g, unit_value: unitValue, current_value: currentValue + unitValue };
+        return { ...reset, unit_value: unitValue, current_value: currentValue + unitValue };
       }),
     }));
   };
