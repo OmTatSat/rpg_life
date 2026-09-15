@@ -138,19 +138,22 @@ export default function ActionLogger({ state, setState }: Props) {
         {/* Quick templates */}
         <div className="mt-3">
           <div className="text-xs text-[var(--text-dim)] mb-2">Быстрые действия:</div>
-          <div className="flex flex-wrap gap-2">
-            {state.categories.slice(0, 3).map(cat => {
-              const templates = getQuickTemplates(state, cat.id);
-              return templates.slice(0, 2).map((t, i) => (
-                <button
-                  key={`${cat.id}-${i}`}
-                  onClick={() => setText(t)}
-                  className="chip-quick text-xs px-3 py-1.5 rounded-full bg-[var(--panel-2)] border border-[var(--line)] text-[var(--text-dim)] hover:text-[var(--text)]"
-                >
-                  {t.length > 25 ? t.slice(0, 25) + '…' : t}
-                </button>
-              ));
-            })}
+          <div className="max-h-[120px] overflow-y-auto pr-2">
+            <div className="flex flex-wrap gap-2">
+              {state.categories.map(cat => {
+                const templates = getQuickTemplates(state, cat.id);
+                return templates.map((t, i) => (
+                  <button
+                    key={`${cat.id}-${i}`}
+                    onClick={() => setText(t)}
+                    title={t}
+                    className="chip-quick text-xs px-3 py-1.5 rounded-full bg-[var(--panel-2)] border border-[var(--line)] text-[var(--text-dim)] hover:text-[var(--text)]"
+                  >
+                    {t.length > 25 ? t.slice(0, 25) + '…' : t}
+                  </button>
+                ));
+              })}
+            </div>
           </div>
         </div>
 
