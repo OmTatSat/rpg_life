@@ -14,6 +14,28 @@ export default function ActionLogger({ state, setState }: Props) {
   const [artifactHint, setArtifactHint] = useState<string | null>(null);
   const [showHistory, setShowHistory] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  
+  // Умный поиск
+  const searchText = text.toLowerCase().trim();
+  const hasSearchText = searchText.length > 0;
+  
+  // Фильтрация быстрых действий
+  const filteredQuickActions = hasSearchText
+    ? state.categories.map(cat => ({
+        ...cat,
+        templates: getQuickTemplates(state, cat.id).filter(t => 
+          t.toLowerCase().includes(searchText)
+        )
+      })).filter(cat => cat.templates.length > 0)
+    : [];
+  
+  // Фильтрация истории
+  const filteredHistory = hasSearchText
+    ? state.history.filter(h => {
+        const fullText = (h.full_text || h.text).toLowerCase();
+        return fullText.includes(searchText);
+      })
+    : [];
 
   const handleSubmit = async () => {
     if (!text.trim()) return;
@@ -139,20 +161,25 @@ export default function ActionLogger({ state, setState }: Props) {
         {/* Quick templates */}
         <div className="mt-3">
           <div className="text-xs text-[var(--text-dim)] mb-2">
-            Быстрые действия ({state.history.length} в истории):
+            {hasSearchText 
+              ? `Найдено в быстрых действиях (${filteredQuickActions.reduce((sum, cat) => sum + cat.templates.length, 0)}):`
+              : `Быстрые действия (${state.history.length} в истории):`
+            }
           </div>
           <div className="max-h-[120px] overflow-y-auto pr-2">
             <div className="flex flex-wrap gap-2">
-              {state.categories.map(cat => {
-                const templates = getQuickTemplates(state, cat.id);
-                if (templates.length === 0) return null;
+              {(hasSearchText ? filteredQuickActions : state.categories.map(cat => ({
+                ...cat,
+                templates: getQuickTemplates(state, cat.id)
+              }))).map(cat => {
+                if (cat.templates.length === 0) return null;
                 return (
                   <div key={cat.id} className="w-full mb-2">
                     <div className="text-xs text-[var(--text-dim)] mb-1 font-medium" style={{ color: cat.color }}>
-                      {cat.name} ({templates.length}):
+                      {cat.name} ({cat.templates.length}):
                     </div>
                     <div className="flex flex-wrap gap-2">
-                      {templates.map((t, i) => (
+                      {cat.templates.map((t, i) => (
                         <button
                           key={`${cat.id}-${i}`}
                           onClick={() => setText(t)}
@@ -166,6 +193,9 @@ export default function ActionLogger({ state, setState }: Props) {
                   </div>
                 );
               })}
+              {hasSearchText && filteredQuickActions.length === 0 && (
+                <div className="text-xs text-[var(--text-dim)] italic">Ничего не найдено</div>
+              )}
             </div>
           </div>
         </div>
@@ -200,38 +230,51 @@ export default function ActionLogger({ state, setState }: Props) {
       {/* History */}
       <div className="glass-panel p-4">
         <div className="flex justify-between items-center mb-3">
-          <h3 className="text-sm font-semibold">История ({state.history.length})</h3>
-          <button
-            onClick={() => setShowHistory(!showHistory)}
-            className="text-xs text-[var(--accent)] hover:underline"
-          >
-            {showHistory ? 'Свернуть' : 'Показать все'}
-          </button>
+          <h3 className="text-sm font-semibold">
+            {hasSearchText 
+              ? `Найдено в истории (${filteredHistory.length}):`
+              : `История (${state.history.length})`
+            }
+          </h3>
+          {!hasSearchText && (
+            <button
+              onClick={() => setShowHistory(!showHistory)}
+              className="text-xs text-[var(--accent)] hover:underline"
+            >
+              {showHistory ? 'Свернуть' : 'Показать все'}
+            </button>
+          )}
         </div>
 
         {state.history.length === 0 ? (
           <p className="text-sm text-[var(--text-dim)]">Пока пусто — запиши первое действие выше.</p>
+        ) : hasSearchText && filteredHistory.length === 0 ? (
+          <p className="text-sm text-[var(--text-dim)] italic">Ничего не найдено по запросу "{text}"</p>
         ) : (
           <div className="space-y-2">
-            {(showHistory ? state.history : state.history.slice(-10)).slice().reverse().map((h, revIdx) => {
+            {(hasSearchText 
+              ? filteredHistory 
+              : (showHistory ? state.history : state.history.slice(-10))
+            ).slice().reverse().map((h, revIdx) => {
               const origIdx = state.history.length - 1 - revIdx;
               const cat = state.categories.find(c => c.id === h.category_id);
-              const isExpanded = expandedId === h.id;
+              // Автоматически раскрывать при поиске
+              const isExpanded = hasSearchText || expandedId === h.id;
               const fullText = h.full_text || h.text;
               return (
                 <div key={h.id} className="border-b border-[var(--line)] last:border-0">
                   <div className="flex items-start gap-3 py-2">
                     <div
                       className="flex-1 min-w-0 cursor-pointer"
-                      onClick={() => setExpandedId(isExpanded ? null : h.id)}
+                      onClick={() => !hasSearchText && setExpandedId(expandedId === h.id ? null : h.id)}
                     >
                       <div className="text-sm">{h.text}</div>
                       <div className="text-xs text-[var(--text-dim)] mt-0.5 flex items-center gap-1">
                         <span style={{ color: cat?.color }}>{cat?.name || h.category_id}</span>
                         <span>·</span>
                         <span>{new Date(h.timestamp).toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}</span>
-                        {fullText !== h.text && (
-                          <span className="text-[var(--accent)] text-xs">{isExpanded ? '▲' : '▼'}</span>
+                        {!hasSearchText && fullText !== h.text && (
+                          <span className="text-[var(--accent)] text-xs">{expandedId === h.id ? '▲' : '▼'}</span>
                         )}
                       </div>
                     </div>
