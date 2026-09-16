@@ -137,21 +137,33 @@ export default function ActionLogger({ state, setState }: Props) {
         
         {/* Quick templates */}
         <div className="mt-3">
-          <div className="text-xs text-[var(--text-dim)] mb-2">Быстрые действия:</div>
+          <div className="text-xs text-[var(--text-dim)] mb-2">
+            Быстрые действия ({state.history.length} в истории):
+          </div>
           <div className="max-h-[120px] overflow-y-auto pr-2">
             <div className="flex flex-wrap gap-2">
               {state.categories.map(cat => {
                 const templates = getQuickTemplates(state, cat.id);
-                return templates.map((t, i) => (
-                  <button
-                    key={`${cat.id}-${i}`}
-                    onClick={() => setText(t)}
-                    title={t}
-                    className="chip-quick text-xs px-3 py-1.5 rounded-full bg-[var(--panel-2)] border border-[var(--line)] text-[var(--text-dim)] hover:text-[var(--text)]"
-                  >
-                    {t.length > 25 ? t.slice(0, 25) + '…' : t}
-                  </button>
-                ));
+                if (templates.length === 0) return null;
+                return (
+                  <div key={cat.id} className="w-full mb-2">
+                    <div className="text-xs text-[var(--text-dim)] mb-1 font-medium" style={{ color: cat.color }}>
+                      {cat.name} ({templates.length}):
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {templates.map((t, i) => (
+                        <button
+                          key={`${cat.id}-${i}`}
+                          onClick={() => setText(t)}
+                          title={t}
+                          className="chip-quick text-xs px-3 py-1.5 rounded-full bg-[var(--panel-2)] border border-[var(--line)] text-[var(--text-dim)] hover:text-[var(--text)] hover:border-[var(--accent)]"
+                        >
+                          {t.length > 25 ? t.slice(0, 25) + '…' : t}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                );
               })}
             </div>
           </div>

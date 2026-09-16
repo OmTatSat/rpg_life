@@ -292,7 +292,6 @@ export function getQuickTemplates(state: AppState, catId: string): string[] {
       if (!seen.has(t)) {
         seen.add(t);
         result.push(t);
-        if (result.length >= 5) break;
       }
     }
   }
