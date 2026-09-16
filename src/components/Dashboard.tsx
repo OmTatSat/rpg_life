@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { AppState, deriveLevel, getCategoryTotalXp, getOverallLevel, calculateStreak, getHeatmapData, getTotalXp } from '../store';
 import Biometrics from './Biometrics';
 import InterventionProtocol from './InterventionProtocol';
+import SystemStatusIndicator from './SystemStatusIndicator';
 
 interface Props {
   state: AppState;
@@ -54,6 +55,7 @@ function HeatMap({ data }: { data: { date: string; count: number; xp: number }[]
 }
 
 export default function Dashboard({ state, setState }: Props) {
+  const [showIntervention, setShowIntervention] = useState(false);
   const overall = getOverallLevel(state);
   const streak = calculateStreak(state.history);
   const heatmapData = getHeatmapData(state.history);
@@ -114,11 +116,31 @@ export default function Dashboard({ state, setState }: Props) {
         </div>
       </div>
 
+      {/* Индикатор состояния системы */}
+      <SystemStatusIndicator 
+        state={state} 
+        onOpenIntervention={() => setShowIntervention(true)} 
+      />
+
+      {/* Модальное окно InterventionProtocol */}
+      {showIntervention && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="max-w-lg w-full max-h-[90vh] overflow-y-auto">
+            <div className="relative">
+              <button
+                onClick={() => setShowIntervention(false)}
+                className="absolute top-2 right-2 text-[var(--text-dim)] hover:text-[var(--text)] text-2xl z-10"
+              >
+                ×
+              </button>
+              <InterventionProtocol state={state} setState={setState} />
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Биометрика ЦНС */}
       <Biometrics state={state} setState={setState} />
-
-      {/* Протокол вмешательства */}
-      <InterventionProtocol state={state} setState={setState} />
 
       {/* Heat Map */}
       <div className="glass-panel p-4">

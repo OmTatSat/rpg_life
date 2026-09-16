@@ -20,6 +20,20 @@ const MOTIVATORS_GENERAL = [
   { text: "Не обязательно хотеть — достаточно начать, и захочется по ходу.", source: "поведенческая активация" },
 ];
 
+// Системные аксиомы — биология/нейронаука
+const SYSTEM_AXIOMS = [
+  { text: "Эскапизм не восстанавливает ману, он снижает максимальный объем твоего резервуара.", source: "нейробиология зависимости" },
+  { text: "Импульс — это не враг, это сырой материал для расширения Окна Толерантности.", source: "polyvagal theory, Porges" },
+  { text: "Отдых (парасимпатика) — это не отсутствие работы, это фаза интеграции нейронных связей.", source: "нейропластичность" },
+  { text: "Соматический груз — это не слабость характера, это физиология. Его нельзя «пережить силой воли».", source: "соматическая психология" },
+  { text: "Окно толерантности — это диапазон, в котором ты можешь чувствовать и действовать. За его пределами — либо freeze, либо fight/flight.", source: "window of tolerance, Siegel" },
+  { text: "Каждый раз, когда ты встречаешь импульс и не действуешь автоматически, ты расширяешь префронтальную кору.", source: "нейропластичность, self-regulation" },
+  { text: "Восстановление ёмкости ЦНС — это не награда за успех, это условие для следующего уровня.", source: "allostatic load theory" },
+  { text: "Токсичный дофамин (рилсы, порно) — это не удовольствие, это кредит под высокие проценты.", source: "дофаминовая система вознаграждения" },
+  { text: "Дыхание — это пульт управления нервной системой. 4-7-8 — это не магия, это физиология блуждающего нерва.", source: "vagus nerve stimulation" },
+  { text: "Интеграция тени — это не про «стать хорошим», это про возвращение энергии, застрявшей в избегании.", source: "Jungian shadow work" },
+];
+
 const MOTIVATORS_BY_CATEGORY: Record<string, { text: string; source: string }[]> = {
   health: [
     { text: "Тело — это база, на которой держится всё остальное сегодня.", source: "" },
@@ -73,9 +87,10 @@ export default function MotivatorSidebar({ state }: Props) {
     return insight && (insight.status === 'refined' || insight.status === 'bounded');
   });
 
-  // Build pool of all motivators (general + insights)
+  // Build pool of all motivators (general + system axioms + insights)
   const allMotivators = [
     ...MOTIVATORS_GENERAL,
+    ...SYSTEM_AXIOMS.map(ax => ({ ...ax, source: `🧬 ${ax.source}` })),
     ...insightArtifacts.map((a: any) => ({ text: a.description, source: '✨ инсайт' })),
   ];
 
