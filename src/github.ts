@@ -178,5 +178,12 @@ export function mergeState(local: AppState, remote: AppState): AppState {
     gh_token: local.gh_token,
     gh_repo: local.gh_repo,
     gh_file_path: local.gh_file_path,
+    
+    // Биометрические метрики
+    nervousSystemCapacity: Math.max(local.nervousSystemCapacity || 100, remote.nervousSystemCapacity || 100),
+    currentSomaticLoad: Math.max(local.currentSomaticLoad || 0, remote.currentSomaticLoad || 0),
+    baselineShift: local.baselineShift || 'optimal',
+    isBurnoutRisk: (local.currentSomaticLoad || 0) > 85 || (remote.currentSomaticLoad || 0) > 85,
+    lastDailyReset: local.lastDailyReset || remote.lastDailyReset || new Date().toISOString(),
   };
 }

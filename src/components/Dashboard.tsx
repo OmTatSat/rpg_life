@@ -1,8 +1,10 @@
 import React from 'react';
 import { AppState, deriveLevel, getCategoryTotalXp, getOverallLevel, calculateStreak, getHeatmapData, getTotalXp } from '../store';
+import Biometrics from './Biometrics';
 
 interface Props {
   state: AppState;
+  setState: (fn: (prev: AppState) => AppState) => void;
 }
 
 function ProgressRing({ percent, size = 60, strokeWidth = 5, color = '#6c7bff' }: { percent: number; size?: number; strokeWidth?: number; color?: string }) {
@@ -50,7 +52,7 @@ function HeatMap({ data }: { data: { date: string; count: number; xp: number }[]
   );
 }
 
-export default function Dashboard({ state }: Props) {
+export default function Dashboard({ state, setState }: Props) {
   const overall = getOverallLevel(state);
   const streak = calculateStreak(state.history);
   const heatmapData = getHeatmapData(state.history);
@@ -110,6 +112,9 @@ export default function Dashboard({ state }: Props) {
           <div className="text-xs text-[var(--text-dim)] mt-1">золото</div>
         </div>
       </div>
+
+      {/* Биометрика ЦНС */}
+      <Biometrics state={state} setState={setState} />
 
       {/* Heat Map */}
       <div className="glass-panel p-4">

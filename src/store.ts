@@ -151,6 +151,13 @@ export interface AppState {
   gh_repo: string;
   gh_file_path: string;
   gh_auto_sync: boolean;
+  
+  // Биометрические метрики
+  nervousSystemCapacity: number; // Емкость Буфера ЦНС (базовое 100, минимум 50)
+  currentSomaticLoad: number; // Текущий Соматический Груз (0-100)
+  baselineShift: 'optimal' | 'hyperaroused' | 'hypoaroused'; // Сдвиг базовой линии
+  isBurnoutRisk: boolean; // Флаг риска выгорания (>85% нагрузки)
+  lastDailyReset: string; // Дата последнего ночного гомеостаза
 }
 
 // Default state
@@ -188,6 +195,72 @@ export function createDefaultState(): AppState {
     gh_repo: '',
     gh_file_path: 'data/life-rpg-v2.json',
     gh_auto_sync: true,
+    
+    // Биометрические метрики
+    nervousSystemCapacity: 100,
+    currentSomaticLoad: 0,
+    baselineShift: 'optimal',
+    isBurnoutRisk: false,
+    lastDailyReset: new Date().toISOString(),
+  };
+}
+
+// Биометрические утилиты
+export function addSomaticLoad(state: AppState, amount: number): AppState {
+  const newLoad = Math.min(100, state.currentSomaticLoad + amount);
+  return {
+    ...state,
+    currentSomaticLoad: newLoad,
+    isBurnoutRisk: newLoad > 85,
+  };
+}
+
+export function reduceSomaticLoad(state: AppState, amount: number): AppState {
+  const newLoad = Math.max(0, state.currentSomaticLoad - amount);
+  return {
+    ...state,
+    currentSomaticLoad: newLoad,
+    isBurnoutRisk: newLoad > 85,
+  };
+}
+
+export function applyDailyReset(state: AppState): AppState {
+  const now = new Date();
+  const lastReset = new Date(state.lastDailyReset);
+  
+  // Проверяем, прошёл ли день с последнего сброса
+  const daysDiff = Math.floor((now.getTime() - lastReset.getTime()) / (1000 * 60 * 60 * 24));
+  
+  if (daysDiff >= 1) {
+    // Ночной гомеостаз: снижаем нагрузку на 20% за каждый пропущенный день
+    let newLoad = state.currentSomaticLoad;
+    for (let i = 0; i < daysDiff; i++) {
+      newLoad = newLoad * 0.8; // -20%
+    }
+    
+    return {
+      ...state,
+      currentSomaticLoad: Math.max(0, newLoad),
+      isBurnoutRisk: newLoad > 85,
+      lastDailyReset: now.toISOString(),
+    };
+  }
+  
+  return state;
+}
+
+export function updateBaselineShift(state: AppState): AppState {
+  let shift: 'optimal' | 'hyperaroused' | 'hypoaroused' = 'optimal';
+  
+  if (state.currentSomaticLoad > 70) {
+    shift = 'hyperaroused'; // Перегрузка
+  } else if (state.currentSomaticLoad < 20 && state.nervousSystemCapacity < 70) {
+    shift = 'hypoaroused'; // Недостаточная активация
+  }
+  
+  return {
+    ...state,
+    baselineShift: shift,
   };
 }
 
@@ -516,6 +589,13 @@ export function loadState(): AppState {
         gh_repo: parsed.gh_repo || '',
         gh_file_path: parsed.gh_file_path || 'data/life-rpg-v2.json',
         gh_auto_sync: parsed.gh_auto_sync !== false, // default true
+        
+        // Биометрические метрики (миграция для старых данных)
+        nervousSystemCapacity: parsed.nervousSystemCapacity ?? defaultState.nervousSystemCapacity,
+        currentSomaticLoad: parsed.currentSomaticLoad ?? defaultState.currentSomaticLoad,
+        baselineShift: parsed.baselineShift || defaultState.baselineShift,
+        isBurnoutRisk: parsed.isBurnoutRisk ?? defaultState.isBurnoutRisk,
+        lastDailyReset: parsed.lastDailyReset || defaultState.lastDailyReset,
       };
     }
   } catch (e) {

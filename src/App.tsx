@@ -216,7 +216,7 @@ export default function App() {
 
           {/* Center Content */}
           <div className="flex-1 max-w-lg min-w-0">
-            {activeTab === 'dashboard' && <Dashboard state={state} />}
+            {activeTab === 'dashboard' && <Dashboard state={state} setState={setState} />}
             {activeTab === 'log' && <ActionLogger state={state} setState={setState} />}
             {activeTab === 'goals' && <Goals state={state} setState={setState} />}
             {activeTab === 'seeds' && <Seeds state={state} setState={setState} />}
