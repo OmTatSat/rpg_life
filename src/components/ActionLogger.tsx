@@ -13,6 +13,7 @@ export default function ActionLogger({ state, setState }: Props) {
   const [clarification, setClarification] = useState<string | null>(null);
   const [artifactHint, setArtifactHint] = useState<string | null>(null);
   const [showHistory, setShowHistory] = useState(false);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
 
   const handleSubmit = async () => {
     if (!text.trim()) return;
@@ -215,25 +216,52 @@ export default function ActionLogger({ state, setState }: Props) {
             {(showHistory ? state.history : state.history.slice(-10)).slice().reverse().map((h, revIdx) => {
               const origIdx = state.history.length - 1 - revIdx;
               const cat = state.categories.find(c => c.id === h.category_id);
+              const isExpanded = expandedId === h.id;
+              const fullText = h.full_text || h.text;
               return (
-                <div key={h.id} className="flex items-start gap-3 py-2 border-b border-[var(--line)] last:border-0">
-                  <div className="flex-1 min-w-0">
-                    <div className="text-sm">{h.text}</div>
-                    <div className="text-xs text-[var(--text-dim)] mt-0.5">
-                      <span style={{ color: cat?.color }}>{cat?.name || h.category_id}</span>
-                      {' · '}
-                      {new Date(h.timestamp).toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
+                <div key={h.id} className="border-b border-[var(--line)] last:border-0">
+                  <div className="flex items-start gap-3 py-2">
+                    <div
+                      className="flex-1 min-w-0 cursor-pointer"
+                      onClick={() => setExpandedId(isExpanded ? null : h.id)}
+                    >
+                      <div className="text-sm">{h.text}</div>
+                      <div className="text-xs text-[var(--text-dim)] mt-0.5 flex items-center gap-1">
+                        <span style={{ color: cat?.color }}>{cat?.name || h.category_id}</span>
+                        <span>·</span>
+                        <span>{new Date(h.timestamp).toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}</span>
+                        {fullText !== h.text && (
+                          <span className="text-[var(--accent)] text-xs">{isExpanded ? '▲' : '▼'}</span>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-mono text-[var(--good)]">+{h.final_xp}</span>
+                      <button
+                        onClick={() => deleteEntry(showHistory ? origIdx : state.history.length - 1 - revIdx)}
+                        className="text-[var(--text-dim)] hover:text-[var(--danger)] text-lg leading-none px-1"
+                      >
+                        ×
+                      </button>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-mono text-[var(--good)]">+{h.final_xp}</span>
-                    <button
-                      onClick={() => deleteEntry(showHistory ? origIdx : state.history.length - 1 - revIdx)}
-                      className="text-[var(--text-dim)] hover:text-[var(--danger)] text-lg leading-none px-1"
-                    >
-                      ×
-                    </button>
-                  </div>
+                  {isExpanded && fullText !== h.text && (
+                    <div className="ml-4 mb-2 animate-slide-up">
+                      <div className="bg-[var(--panel-2)] border border-[var(--line)] rounded-lg p-3">
+                        <div className="text-xs text-[var(--text-dim)] mb-1">Полный текст:</div>
+                        <div className="text-sm whitespace-pre-wrap">{fullText}</div>
+                        <button
+                          onClick={() => {
+                            setText(fullText);
+                            window.scrollTo({ top: 0, behavior: 'smooth' });
+                          }}
+                          className="mt-2 text-xs px-3 py-1.5 bg-[var(--accent)] text-white rounded hover:opacity-90"
+                        >
+                          📋 Использовать как новое действие
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               );
             })}
