@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { AppState, genId, getQuickTemplates, calculateGoldFromXp } from '../store';
+import { AppState, genId, getQuickTemplates, calculateGoldFromXp, addSomaticLoad } from '../store';
 import { callGameMaster } from '../api';
 
 interface Props {
@@ -14,6 +14,7 @@ export default function ActionLogger({ state, setState }: Props) {
   const [artifactHint, setArtifactHint] = useState<string | null>(null);
   const [showHistory, setShowHistory] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [nervousSystemImpact, setNervousSystemImpact] = useState<{ somaticImpact: number; nscModifier: number } | null>(null);
   
   // Умный поиск
   const searchText = text.toLowerCase().trim();
@@ -56,13 +57,23 @@ export default function ActionLogger({ state, setState }: Props) {
       const ts = new Date().toISOString();
       const summaryParts: string[] = [];
 
-      // Calculate gold before setState
+      // Calculate gold and somatic impact before setState
       let totalGold = 0;
+      let totalSomaticImpact = 0;
+      let totalNscModifier = 0;
       matches.forEach((m: any) => {
         const cat = state.categories.find(c => c.id === m.matched_category_id);
         if (!cat) return;
         const finalXp = Math.round(m.base_xp * cat.weight * m.contribution_factor);
         totalGold += calculateGoldFromXp(finalXp);
+        
+        // Собираем влияние на нервную систему
+        if (typeof m.somaticImpact === 'number') {
+          totalSomaticImpact += m.somaticImpact;
+        }
+        if (typeof m.nscModifier === 'number') {
+          totalNscModifier += m.nscModifier;
+        }
       });
 
       setState(prev => {
@@ -83,6 +94,18 @@ export default function ActionLogger({ state, setState }: Props) {
           summaryParts.push(`+${finalXp} XP → ${cat.name}`);
         });
         newState.gold = (newState.gold || 0) + totalGold;
+        
+        // Применяем влияние на нервную систему
+        if (totalSomaticImpact !== 0) {
+          const updated = addSomaticLoad(newState, totalSomaticImpact);
+          newState.currentSomaticLoad = updated.currentSomaticLoad;
+          newState.isBurnoutRisk = updated.isBurnoutRisk;
+        }
+        if (totalNscModifier !== 0) {
+          // Модифицируем ёмкость нервной системы
+          const newCapacity = Math.max(50, Math.min(150, newState.nervousSystemCapacity + totalNscModifier));
+          newState.nervousSystemCapacity = newCapacity;
+        }
 
         // Supplements
         if (Array.isArray(result.supplements) && result.supplements.length > 0) {
@@ -124,6 +147,12 @@ export default function ActionLogger({ state, setState }: Props) {
       if (result.seed_detected?.text) summaryText += ' · 🌱 замечено зерно';
       setStatus({ type: 'ok', text: summaryText });
 
+      // Сохраняем влияние на нервную систему для отображения
+      setNervousSystemImpact({
+        somaticImpact: totalSomaticImpact,
+        nscModifier: totalNscModifier,
+      });
+
       if (result.artifact_hint?.artifact_id) {
         const art = state.artifacts.find(a => a.id === result.artifact_hint.artifact_id);
         if (art) setArtifactHint(`💡 «${art.name}»: ${result.artifact_hint.note}`);
@@ -152,7 +181,13 @@ export default function ActionLogger({ state, setState }: Props) {
         <h3 className="text-sm font-semibold mb-3">Что сделал?</h3>
         <textarea
           value={text}
-          onChange={e => setText(e.target.value)}
+          onChange={e => {
+            setText(e.target.value);
+            // Очищаем индикаторы при новом вводе
+            if (nervousSystemImpact) {
+              setNervousSystemImpact(null);
+            }
+          }}
           onKeyDown={handleKeyDown}
           placeholder="Например: потренировался 40 минут, потом почитал книгу..."
           className="w-full min-h-[80px] bg-[var(--panel-2)] border border-[var(--line)] rounded-lg p-3 text-sm text-[var(--text)] resize-y focus:outline-none focus:border-[var(--accent)] transition-colors"
@@ -221,6 +256,64 @@ export default function ActionLogger({ state, setState }: Props) {
         {status.text && (
           <div className={`mt-3 text-sm ${status.type === 'err' ? 'text-[var(--danger)]' : status.type === 'ok' ? 'text-[var(--good)]' : 'text-[var(--text-dim)]'}`}>
             {status.text}
+          </div>
+        )}
+
+        {/* Индикаторы влияния на нервную систему */}
+        {nervousSystemImpact && status.type === 'ok' && (
+          <div className="mt-3 space-y-2">
+            {nervousSystemImpact.somaticImpact > 0 && (
+              <div className="flex items-center gap-2 p-2 bg-[var(--danger)] bg-opacity-10 border border-[var(--danger)] rounded-lg">
+                <span className="text-lg">⚠️</span>
+                <div className="flex-1">
+                  <div className="text-sm font-semibold text-[var(--danger)]">
+                    +{nervousSystemImpact.somaticImpact} Соматический груз
+                  </div>
+                  <div className="text-xs text-[var(--text-dim)]">
+                    Нагрузка на нервную систему увеличена
+                  </div>
+                </div>
+              </div>
+            )}
+            {nervousSystemImpact.somaticImpact < 0 && (
+              <div className="flex items-center gap-2 p-2 bg-[var(--good)] bg-opacity-10 border border-[var(--good)] rounded-lg">
+                <span className="text-lg">✨</span>
+                <div className="flex-1">
+                  <div className="text-sm font-semibold text-[var(--good)]">
+                    {nervousSystemImpact.somaticImpact} Соматический груз
+                  </div>
+                  <div className="text-xs text-[var(--text-dim)]">
+                    Восстановление нервной системы
+                  </div>
+                </div>
+              </div>
+            )}
+            {nervousSystemImpact.nscModifier < 0 && (
+              <div className="flex items-center gap-2 p-2 bg-[var(--warn)] bg-opacity-10 border border-[var(--warn)] rounded-lg">
+                <span className="text-lg">🧠</span>
+                <div className="flex-1">
+                  <div className="text-sm font-semibold text-[var(--warn)]">
+                    Зафиксировано сужение Емкости ЦНС
+                  </div>
+                  <div className="text-xs text-[var(--text-dim)]">
+                    {nervousSystemImpact.nscModifier} к ёмкости нервной системы
+                  </div>
+                </div>
+              </div>
+            )}
+            {nervousSystemImpact.nscModifier > 0 && (
+              <div className="flex items-center gap-2 p-2 bg-[var(--accent)] bg-opacity-10 border border-[var(--accent)] rounded-lg">
+                <span className="text-lg">💪</span>
+                <div className="flex-1">
+                  <div className="text-sm font-semibold text-[var(--accent)]">
+                    Расширение Емкости ЦНС
+                  </div>
+                  <div className="text-xs text-[var(--text-dim)]">
+                    +{nervousSystemImpact.nscModifier} к ёмкости нервной системы
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
