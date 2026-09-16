@@ -1,0 +1,143 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --bg: #0f1117;
+    --panel: #1a1d27;
+    --panel-2: #22252f;
+    --line: #2a2e3a;
+    --text: #e7e8ed;
+    --text-dim: #8c90a0;
+    --accent: #6c7bff;
+    --accent-glow: #6c7bff40;
+    --good: #45b26b;
+    --warn: #e0a13c;
+    --danger: #e0574f;
+    --purple: #a06fd6;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  }
+
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--line) transparent;
+  }
+}
+
+@layer components {
+  .glass-panel {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+  }
+
+  .glow-accent {
+    box-shadow: 0 0 20px var(--accent-glow);
+  }
+
+  .xp-burst {
+    animation: xpBurst 0.6s ease-out;
+  }
+
+  @keyframes xpBurst {
+    0% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.3); opacity: 0.8; }
+    100% { transform: scale(1); opacity: 1; }
+  }
+
+  @keyframes slideUp {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+
+  .animate-slide-up {
+    animation: slideUp 0.3s ease-out;
+  }
+
+  .animate-fade-in {
+    animation: fadeIn 0.4s ease-out;
+  }
+
+  .progress-ring {
+    transform: rotate(-90deg);
+  }
+
+  .progress-ring-circle {
+    transition: stroke-dashoffset 0.6s ease;
+  }
+
+  .streak-fire {
+    animation: fireGlow 2s ease-in-out infinite alternate;
+  }
+
+  @keyframes fireGlow {
+    from { text-shadow: 0 0 4px #ff6b35; }
+    to { text-shadow: 0 0 12px #ff6b35, 0 0 20px #ff4500; }
+  }
+
+  .heat-cell {
+    transition: all 0.2s ease;
+  }
+
+  .heat-cell:hover {
+    transform: scale(1.4);
+    z-index: 10;
+  }
+
+  .tab-active {
+    background: var(--accent);
+    color: white;
+  }
+
+  .chip-quick {
+    transition: all 0.15s ease;
+  }
+
+  .chip-quick:hover {
+    transform: translateY(-1px);
+    border-color: var(--accent);
+  }
+
+  .chip-quick:active {
+    transform: translateY(0);
+  }
+
+  .line-clamp-2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  /* Sidebar animations */
+  .sidebar-card {
+    transition: all 0.3s ease;
+  }
+
+  .sidebar-card:hover {
+    border-color: var(--accent);
+    transform: translateX(-2px);
+  }
+
+  /* Mobile compact view */
+  @media (max-width: 1023px) {
+    .mobile-goals-preview {
+      display: block;
+    }
+  }
+
+  @media (min-width: 1024px) {
+    .mobile-goals-preview {
+      display: none;
+    }
+  }
+}
