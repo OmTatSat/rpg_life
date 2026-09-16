@@ -11,6 +11,7 @@ import Insights from './components/Insights';
 import Settings from './components/Settings';
 import MotivatorSidebar from './components/Motivators';
 import GoalsSidebar from './components/GoalsSidebar';
+import Toast from './components/Toast';
 
 type Tab = 'dashboard' | 'log' | 'goals' | 'seeds' | 'brainstorm' | 'shop' | 'insights' | 'settings';
 
@@ -250,6 +251,9 @@ export default function App() {
           ))}
         </div>
       </nav>
+
+      {/* Toast Notifications */}
+      <Toast />
     </div>
   );
 }

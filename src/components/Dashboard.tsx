@@ -1,6 +1,7 @@
 import React from 'react';
 import { AppState, deriveLevel, getCategoryTotalXp, getOverallLevel, calculateStreak, getHeatmapData, getTotalXp } from '../store';
 import Biometrics from './Biometrics';
+import InterventionProtocol from './InterventionProtocol';
 
 interface Props {
   state: AppState;
@@ -115,6 +116,9 @@ export default function Dashboard({ state, setState }: Props) {
 
       {/* Биометрика ЦНС */}
       <Biometrics state={state} setState={setState} />
+
+      {/* Протокол вмешательства */}
+      <InterventionProtocol state={state} setState={setState} />
 
       {/* Heat Map */}
       <div className="glass-panel p-4">
